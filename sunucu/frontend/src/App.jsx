@@ -14,19 +14,18 @@ import EvidenceModal from "./components/EvidenceModal.jsx";
 import CamerasAdminModal from "./components/CamerasAdminModal.jsx";
 
 const STATS_POLL_MS = 10000;
-const AGE_TICK_MS = 500;
 
 export default function App() {
   const hub = useCameraHub();
   const metrics = useMetrics();
   const log = useViolationLog();
   const [stats, setStats] = useState({});
-  const [camerasOpen, setCamerasOpen] = useState(true);
-  const [violationsOpen, setViolationsOpen] = useState(true);
+  const [camerasOpen, setCamerasOpen] = useState(false);
+  const [violationsOpen, setViolationsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-  const [evidence, setEvidence] = useState(null);
+  const [evidenceQueue, setEvidenceQueue] = useState(null); // { items: [...], index } | null
   const [adminOpen, setAdminOpen] = useState(false);
-  const [ageTick, setAgeTick] = useState(0);
+  const [metricsView, setMetricsView] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
   const [engineBusy, setEngineBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
@@ -49,21 +48,37 @@ export default function App() {
     return () => clearInterval(timer);
   }, [refreshStats]);
 
-  useEffect(() => {
-    const timer = setInterval(() => setAgeTick((n) => n + 1), AGE_TICK_MS);
-    return () => clearInterval(timer);
-  }, []);
-
   function cameraById(id) {
     return hub.cameras.find((c) => c.id === id) || null;
   }
 
+  const evidence = evidenceQueue ? evidenceQueue.items[evidenceQueue.index] : null;
+
+  function openEvidence(items, index) {
+    if (index < 0 || index >= items.length) return;
+    setEvidenceQueue({ items, index });
+  }
+
+  function closeEvidence() {
+    setEvidenceQueue(null);
+  }
+
+  function advanceEvidence() {
+    setEvidenceQueue((q) => {
+      if (!q) return null;
+      const next = q.index + 1;
+      return next < q.items.length ? { ...q, index: next } : null;
+    });
+  }
+
   async function handleSelect(id) {
+    setMetricsView(false);
     await hub.selectCamera(id);
     log.setCameraId(id);
   }
 
   async function handleClose() {
+    setMetricsView(false);
     await hub.releaseCamera();
     log.setCameraId("");
   }
@@ -116,75 +131,81 @@ export default function App() {
     }
   }
 
-  const ageText = hub.analysis
-    ? `son analiz: ${((Date.now() - hub.analysis.receivedAt) / 1000).toFixed(1)} s önce`
-    : "son analiz: —";
-  void ageTick; // yalnız yukarıdaki metni 500ms'de bir yeniden hesaplatmak için
-
   return (
     <div className={`app ${focusMode ? "focus-mode" : ""}`}>
-      {!focusMode && (
-        <Navbar
-          detectorOk={hub.detectorOk}
-          activeName={hub.active?.name}
-          ageText={ageText}
-          stats={stats}
-          metrics={metrics.metrics}
-          metricsOk={metrics.ok}
-          camerasOpen={camerasOpen}
-          violationsOpen={violationsOpen}
-          minConfidence={hub.minConfidence}
-          confidenceFloor={hub.confidenceFloor}
-          onSensitivityChange={hub.setSensitivity}
-          onSetBatchSize={handleSetBatchSize}
-          batchBusy={batchBusy}
-          onToggleCameras={() => setCamerasOpen((v) => !v)}
-          onToggleViolations={() => setViolationsOpen((v) => !v)}
-          onOpenCameraAdmin={() => setAdminOpen(true)}
-          onGenerateReport={handleGenerateReport}
-          reportBusy={reportBusy}
-          onToggleEngine={handleToggleEngine}
-          engineBusy={engineBusy}
-        />
-      )}
-
-      <main className={`layout ${camerasOpen ? "cam-open" : ""} ${violationsOpen ? "vio-open" : ""}`}>
-        {!focusMode && <CameraPanel open={camerasOpen} cameras={hub.cameras} onSelect={handleSelect} />}
-
-        <Stage
-          cameras={hub.cameras}
-          active={hub.active}
-          analysis={hub.analysis}
-          analysisByCamera={hub.analysisByCamera}
-          minConfidence={hub.minConfidence}
-          onSelect={handleSelect}
-          onClose={handleClose}
-          onFullscreen={() => setFocusMode((v) => !v)}
-        />
-
+      <div className="app-viewport">
         {!focusMode && (
-          <ViolationsPanel
-            open={violationsOpen}
-            rows={live.rows}
-            lastHour={stats.lastHour}
-            cameraById={cameraById}
-            onReview={review}
-            onOpenEvidence={setEvidence}
+          <Navbar
+            metrics={metrics.metrics}
+            metricsOk={metrics.ok}
+            camerasOpen={camerasOpen}
+            violationsOpen={violationsOpen}
+            metricsViewOpen={metricsView}
+            minConfidence={hub.minConfidence}
+            confidenceFloor={hub.confidenceFloor}
+            onSensitivityChange={hub.setSensitivity}
+            onToggleCameras={() => setCamerasOpen((v) => !v)}
+            onToggleViolations={() => setViolationsOpen((v) => !v)}
+            onToggleMetricsView={() => setMetricsView((v) => !v)}
+            onGenerateReport={handleGenerateReport}
+            reportBusy={reportBusy}
+            onToggleEngine={handleToggleEngine}
+            engineBusy={engineBusy}
+            onBrandClick={handleClose}
           />
         )}
-      </main>
+
+        <main className={`layout ${camerasOpen ? "cam-open" : ""} ${violationsOpen ? "vio-open" : ""}`}>
+          {!focusMode && (
+            <CameraPanel
+              open={camerasOpen}
+              cameras={hub.cameras}
+              onSelect={handleSelect}
+              onOpenAdmin={() => setAdminOpen(true)}
+            />
+          )}
+
+          <Stage
+            cameras={hub.cameras}
+            active={hub.active}
+            analysis={hub.analysis}
+            analysisByCamera={hub.analysisByCamera}
+            minConfidence={hub.minConfidence}
+            onSelect={handleSelect}
+            onClose={handleClose}
+            onFullscreen={() => setFocusMode((v) => !v)}
+            metricsView={metricsView}
+            metrics={metrics.metrics}
+            metricsOk={metrics.ok}
+            gpuHistory={metrics.gpuHistory}
+            onSetBatchSize={handleSetBatchSize}
+            batchBusy={batchBusy}
+          />
+
+          {!focusMode && (
+            <ViolationsPanel
+              open={violationsOpen}
+              rows={live.rows}
+              lastHour={stats.lastHour}
+              cameraById={cameraById}
+              onReview={review}
+              onOpenEvidence={openEvidence}
+            />
+          )}
+        </main>
+      </div>
 
       {!focusMode && (
         <ViolationLog
           log={log}
           cameras={hub.cameras}
           cameraById={cameraById}
-          onOpenEvidence={setEvidence}
+          onOpenEvidence={openEvidence}
           onDeleteAll={handleDeleteAllHistory}
         />
       )}
 
-      <EvidenceModal evidence={evidence} onClose={() => setEvidence(null)} onReview={review} />
+      <EvidenceModal evidence={evidence} onClose={closeEvidence} onReview={review} onAdvance={advanceEvidence} />
       <CamerasAdminModal
         open={adminOpen}
         cameras={hub.cameras}

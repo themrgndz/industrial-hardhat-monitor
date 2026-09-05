@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import MetricsPanel from "./MetricsPanel.jsx";
 
 function SensitivityControl({ value, floor, onCommit }) {
   const [local, setLocal] = useState(value);
@@ -11,10 +10,11 @@ function SensitivityControl({ value, floor, onCommit }) {
   const commit = (e) => onCommit(Number(e.target.value) / 100);
 
   return (
-    <label className="sensitivity" title="Ekranda gösterilen tespitler için minimum güven eşiği">
+    <label className="d-flex flex-column small text-secondary" style={{ minWidth: 160 }} title="Ekranda gösterilen tespitler için minimum güven eşiği">
       <span>Hassasiyet: %{pct}</span>
       <input
         type="range"
+        className="form-range"
         min={min}
         max={100}
         step={5}
@@ -29,86 +29,76 @@ function SensitivityControl({ value, floor, onCommit }) {
 }
 
 export default function Navbar({
-  detectorOk,
-  activeName,
-  ageText,
-  stats,
   metrics,
   metricsOk,
   camerasOpen,
   violationsOpen,
+  metricsViewOpen,
   minConfidence,
   confidenceFloor,
   onSensitivityChange,
-  onSetBatchSize,
-  batchBusy,
   onToggleCameras,
   onToggleViolations,
-  onOpenCameraAdmin,
+  onToggleMetricsView,
   onGenerateReport,
   reportBusy,
   onToggleEngine,
   engineBusy,
+  onBrandClick,
 }) {
   const enginePaused = !!metrics?.engine?.paused;
   return (
-    <header className="navbar">
-      <div className="navbar-brand">UZMAR TEKNOLOJI</div>
+    <header className="navbar panel-blur border-bottom shadow-sm px-3 py-2 d-flex flex-wrap align-items-center gap-3">
+      <button
+        type="button"
+        className="navbar-brand fw-bold m-0 btn btn-link p-0 text-decoration-none text-reset"
+        style={{ letterSpacing: "0.06em" }}
+        onClick={onBrandClick}
+        title="Tüm kameraların olduğu ana ekrana dön"
+      >
+        UZMAR
+      </button>
 
-      <nav className="navbar-menu">
+      <nav className="d-flex gap-2">
         <button
           type="button"
-          className={`menu-btn ${camerasOpen ? "on" : ""}`}
+          className={`btn btn-sm ${camerasOpen ? "btn-primary" : "btn-outline-secondary"}`}
           onClick={onToggleCameras}
         >
           Kameralar
         </button>
         <button
           type="button"
-          className={`menu-btn ${violationsOpen ? "on" : ""}`}
+          className={`btn btn-sm ${violationsOpen ? "btn-primary" : "btn-outline-secondary"}`}
           onClick={onToggleViolations}
         >
           İhlaller
         </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${metricsViewOpen ? "btn-primary" : "btn-outline-secondary"}`}
+          onClick={onToggleMetricsView}
+        >
+          Sistem Kullanımı
+        </button>
       </nav>
 
-      <div className="navbar-status">
-        <span className={`pill ${detectorOk ? "on" : "off"}`}>
-          detector: {detectorOk ? "bağlı" : "bağlantı yok"}
-        </span>
-        <span className={`pill ${enginePaused ? "off" : "on"}`}>
-          model: {enginePaused ? "duraklatıldı" : "çalışıyor"}
-        </span>
-        <span className={`pill ${activeName ? "on" : ""}`}>
-          aktif kamera: {activeName || "yok"}
-        </span>
-        <span className="pill">{ageText}</span>
-        <MetricsPanel metrics={metrics} ok={metricsOk} onSetBatchSize={onSetBatchSize} batchBusy={batchBusy} />
-      </div>
+      <div className="flex-grow-1" />
 
       <SensitivityControl value={minConfidence} floor={confidenceFloor} onCommit={onSensitivityChange} />
 
-      <div className="navbar-stats">
-        <div className="card"><div className="card-label">Bugün</div><div className="card-value">{stats.today ?? "—"}</div></div>
-        <div className="card"><div className="card-label">Son 1 Saat</div><div className="card-value">{stats.lastHour ?? "—"}</div></div>
-        <div className="card"><div className="card-label">Toplam</div><div className="card-value">{stats.total ?? "—"}</div></div>
-      </div>
-
-      <div className="navbar-actions">
+      <div className="d-flex align-items-center gap-2">
         <button
           type="button"
-          className={`menu-btn ${enginePaused ? "btn-approve" : "btn-danger"}`}
+          className={`btn btn-sm ${enginePaused ? "btn-success" : "btn-danger"}`}
           onClick={onToggleEngine}
           disabled={engineBusy || !metricsOk}
           title={enginePaused ? "Model duraklatıldı, devam ettirmek için tıklayın" : "Modeli tüm kameralarda durdurur"}
         >
           {enginePaused ? "▶ Modeli Başlat" : "⏸ Modeli Durdur"}
         </button>
-        <button type="button" className="menu-btn" onClick={onGenerateReport} disabled={reportBusy}>
+        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onGenerateReport} disabled={reportBusy}>
           {reportBusy ? "Oluşturuluyor…" : "Rapor Oluştur"}
-        </button>
-        <button type="button" className="navbar-gear" onClick={onOpenCameraAdmin} title="Kamera yönetimi">
-          ⚙
         </button>
       </div>
     </header>

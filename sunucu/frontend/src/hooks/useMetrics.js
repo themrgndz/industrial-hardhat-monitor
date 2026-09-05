@@ -2,15 +2,25 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchMetrics, pauseEngine, resumeEngine, updateBatchSize } from "../api/detector.js";
 
 const METRICS_POLL_MS = 3000;
+// 3 saniyelik aralıkla 120 örnek = son 6 dakikalık GPU geçmişi.
+const HISTORY_LIMIT = 120;
 
 export function useMetrics() {
   const [metrics, setMetrics] = useState(null);
   const [ok, setOk] = useState(false);
+  const [gpuHistory, setGpuHistory] = useState([]);
 
   const refresh = useCallback(async () => {
     try {
-      setMetrics(await fetchMetrics());
+      const data = await fetchMetrics();
+      setMetrics(data);
       setOk(true);
+      if (data.gpu?.available) {
+        setGpuHistory((prev) => [
+          ...prev,
+          { t: Date.now(), util: data.gpu.utilizationPercent, mem: data.gpu.memoryPercent },
+        ].slice(-HISTORY_LIMIT));
+      }
     } catch {
       setOk(false);
     }
@@ -33,5 +43,5 @@ export function useMetrics() {
     await refresh();
   }, [refresh]);
 
-  return { metrics, ok, refresh, toggleEngine, setBatchSize };
+  return { metrics, ok, gpuHistory, refresh, toggleEngine, setBatchSize };
 }

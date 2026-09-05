@@ -41,7 +41,6 @@ export function useCameraHub() {
   const [confidenceFloor, setConfidenceFloor] = useState(0);
   const reconnectTimer = useRef(null);
   const sourceRef = useRef(null);
-  const autoSelectedRef = useRef(false);
 
   const applyCameras = useCallback((data) => {
     setCameras(data.cameras || []);
@@ -129,14 +128,6 @@ export function useCameraHub() {
       setDetectorOk(false);
     }
   }, [refresh]);
-
-  // İlk yüklemede backend'de hiç aktif kamera yoksa, verilen kameralardan
-  // ilkini otomatik seç — testte her seferinde elle tıklama gerekmesin.
-  useEffect(() => {
-    if (autoSelectedRef.current || cameras.length === 0) return;
-    autoSelectedRef.current = true;
-    if (activeId === null) selectCamera(cameras[0].id);
-  }, [cameras, activeId, selectCamera]);
 
   const releaseCamera = useCallback(async () => {
     try {
