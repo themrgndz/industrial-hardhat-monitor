@@ -1,101 +1,52 @@
+/* Bootstrap'in karşılamadığı, bu uygulamaya özgü parçalar (canlı video,
+   dinamik kamera ızgarası, panel bulanıklığı, tam ekran modu). Buton, kart,
+   rozet, form, tablo, modal, liste gibi her şey doğrudan Bootstrap
+   sınıflarıyla kuruluyor — bkz. src/components/*.jsx. Burada özel sınıf
+   YOK sayılmaz, sadece Bootstrap'ta karşılığı olmayan davranışlar var. */
+
+/* ---- uygulama iskeleti: navbar + sol/orta/sağ + alt log, panel aç/kapa ---- */
 .app { min-height: 100vh; display: flex; flex-direction: column; }
+/* Navbar + kamera/sahne/ihlal panelleri hep tek ekrana sığar (kamera ızgarası
+   küçülmesin diye) — alttaki "İhlal Kayıtları" bölümü bu sabit-yükseklikli
+   viewport'un DIŞINDA, normal akışta; açılınca sayfa boyu 100vh'yi aşar ve
+   sayfa aşağı doğru kayar/scroll olur, kamera alanını sıkıştırmaz. */
+.app-viewport { height: 100vh; display: flex; flex-direction: column; min-height: 0; }
+/* .navbar'da backdrop-filter (panel-blur) kendi stacking context'ini oluşturuyor —
+   bu, içindeki metrics dropdown'unun z-index'ini navbar'ın kendi katmanına
+   hapseder. position+z-index vererek navbar'ın TÜMÜ (dropdown dahil) .layout
+   altındaki panellerin üzerinde kalsın diye. */
+.navbar { position: relative; z-index: 10; }
 
-/* ---------------- navbar ---------------- */
-.navbar {
-  display: grid;
-  grid-template-columns: auto auto 1fr auto auto auto;
-  align-items: center;
-  gap: 18px;
-  height: var(--nav-h);
-  padding: 0 18px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
+/* native <dialog> öğesine doğrudan .modal-content sınıfı uygulanıyor (Bootstrap'ın
+   kendi JS modal sistemine bağlı .modal/.modal-dialog sarmalayıcıları kullanılmıyor)
+   — genişlik sınırı normalde .modal-dialog'dan gelir, burada elle veriliyor. */
+dialog.modal-content {
+  max-width: 94vw;
+  margin: auto;
+  border: 1px solid var(--bs-border-color);
+  /* Bootstrap'ın modal-header/body/footer iç boşlukları normalde .modal
+     sarmalayıcısında tanımlı --bs-modal-* değişkenlerinden geliyor; o
+     sarmalayıcıyı kullanmadığımız için değişkenler hiç tanımlanmıyor ve
+     padding sıfıra düşüyordu — burada elle yeniden tanımlanıyor. */
+  --bs-modal-padding: 1rem;
+  --bs-modal-header-padding-x: 1rem;
+  --bs-modal-header-padding-y: 1rem;
+  --bs-modal-header-padding: 1rem 1rem;
+  --bs-modal-footer-gap: 0.5rem;
 }
+/* Bootstrap'ın .modal-content{display:flex} kuralı, tarayıcının varsayılan
+   `dialog:not([open]){display:none}` kuralını author-origin önceliğiyle ezer
+   — dialog kapatılınca gerçekten gizlensin diye burada geri kazanılıyor. */
+dialog.modal-content:not([open]) { display: none; }
+dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 
-.navbar-brand {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.navbar-menu { display: flex; gap: 6px; }
-
-.menu-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid transparent;
-}
-.menu-btn:hover { border-color: var(--border); }
-.menu-btn.on { background: var(--panel-2); border-color: var(--accent); color: var(--text); }
-
-.navbar-status { display: flex; gap: 8px; justify-self: end; flex-wrap: wrap; }
-
-.pill {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--raised);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.pill.on { border-color: var(--ok); color: var(--ok); }
-.pill.off { border-color: var(--accent); color: var(--accent); }
-
-/* ---- gpu/zamanlama metrik paneli (navbar) ---- */
-.metrics-status { position: relative; }
-.metrics-pill { cursor: pointer; }
-.metrics-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  width: 360px;
-  max-width: 88vw;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border);
-}
-.metrics-section { margin-top: 10px; }
-.metrics-section:first-of-type { margin-top: 0; }
-.metrics-section h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-.metrics-kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-.metrics-kv li { display: flex; justify-content: space-between; gap: 10px; }
-.metrics-kv li span:first-child { color: var(--muted); }
-.metrics-table { font-size: 11px; }
-.metrics-table th, .metrics-table td { padding: 4px 3px; }
-.metrics-table td:nth-child(2), .metrics-table th:nth-child(2) { text-align: right; }
-.batch-size-control { display: flex; align-items: center; gap: 6px; }
-.batch-size-control input[type="number"] { width: 48px; padding: 1px 4px; font-size: 12px; }
-.batch-size-control button { padding: 1px 6px; font-size: 11px; border-radius: 4px; }
-
-.navbar-stats { display: flex; gap: 6px; }
-.sensitivity { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); justify-self: end; }
-.sensitivity input[type="range"] { width: 140px; accent-color: var(--accent); }
-.card { background: var(--raised); border-radius: 6px; padding: 4px 10px; text-align: center; min-width: 66px; }
-.card-label { color: var(--muted); font-size: 10px; }
-.card-value { font-size: 16px; font-weight: 700; }
-.navbar-actions { display: flex; align-items: center; gap: 8px; }
-
-.navbar-gear { font-size: 15px; padding: 5px 9px; }
-
-/* ---------------- genel panel ---------------- */
-.panel { background: var(--panel); border-radius: 8px; padding: 12px; }
-.panel h2 { margin: 0 0 10px; font-size: 14px; display: flex; align-items: baseline; gap: 8px; }
-
-.muted { color: var(--muted); font-size: 12px; }
-.spacer { flex: 1; }
-.error { color: var(--accent); font-size: 13px; }
-
-/* ---------------- ana yerleşim: sol/orta/sağ, paneller aç-kapa ---------------- */
 .layout {
   display: grid;
   grid-template-columns: 0 minmax(0, 1fr) 0;
   gap: 12px;
   padding: 12px 18px;
   align-items: stretch;
+  flex: 1;
   min-height: 0;
   transition: grid-template-columns 0.2s ease;
 }
@@ -113,67 +64,49 @@
   pointer-events: none;
 }
 
-/* ---- sol: kamera listesi ---- */
-.camera-list { overflow-y: auto; max-height: 74vh; }
+.camera-list, .live-list { overflow-y: auto; max-height: 74vh; }
 
-.cam-card {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: var(--raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px;
-  margin-bottom: 8px;
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
+/* ---- panel bulanıklığı: Kameralar (Stage) hariç her panelin arkaplanı ---- */
+.panel-blur {
+  background: rgba(9, 11, 15, 0.72) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
-.cam-card:hover { border-color: var(--muted); }
-.cam-card.active { border-color: var(--ok); }
-.cam-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: #000; display: block; }
-.cam-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 13px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
-.dot.on { background: var(--ok); }
-.dot.warn { background: var(--warn); }
-.cam-tag { font-size: 10px; color: var(--ok); border: 1px solid var(--ok); border-radius: 4px; padding: 0 4px; }
 
-/* ---- orta: sahne, büyük ve ortalanmış canlı görüntü ---- */
-.stage { display: flex; flex-direction: column; min-width: 0; align-items: center; justify-content: center; }
+/* ---- durum noktası: kamera bağlı/aktif göstergesi (Bootstrap'ta karşılığı yok) ---- */
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bs-danger); flex: none; display: inline-block; }
+.status-dot.on { background: var(--bs-success); box-shadow: 0 0 0 3px rgba(var(--bs-success-rgb), 0.18); }
+.status-dot.warn { background: var(--bs-warning); box-shadow: 0 0 0 3px rgba(var(--bs-warning-rgb), 0.18); }
 
-.grid {
+/* ---- orta: sahne — kamera ızgarası ve canlı görüntü (blursuz kalır) ---- */
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; align-items: center; justify-content: center; padding: 12px; }
+
+.camera-grid {
   width: 100%;
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(var(--grid-cols, 4), minmax(0, 1fr));
+  grid-auto-rows: calc((100% - (var(--grid-rows, 4) - 1) * 10px) / var(--grid-rows, 4));
   gap: 10px;
   align-content: start;
+  overflow-y: auto;
 }
 
-.tile { position: relative; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #000; cursor: pointer; padding: 0; }
-.tile img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.tile { position: relative; overflow: hidden; background: #000; cursor: pointer; padding: 0; border: 0; border-radius: var(--bs-border-radius); }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tile .tile-label {
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 6px; background: rgba(15, 15, 17, 0.82); font-size: 12px; color: var(--text);
+  padding: 4px 6px; background: rgba(15, 15, 17, 0.82); font-size: 12px; color: var(--bs-body-color);
 }
 .tile-dots { position: absolute; inset: 0; pointer-events: none; }
-.tile-dot {
-  position: absolute; width: 10px; height: 10px;
-  transform: translate(-50%, -50%);
-}
+.tile-dot { position: absolute; width: 10px; height: 10px; transform: translate(-50%, -50%); }
 .tile-dot::before, .tile-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; }
-.tile-dot::before {
-  background: currentColor;
-  opacity: 0.4;
-  animation: tile-dot-pulse 2s ease-out infinite;
-}
-.tile-dot::after {
-  inset: 3px;
-  background: currentColor;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-.tile-dot.ok { color: var(--ok); }
-.tile-dot.bad { color: var(--accent); }
+.tile-dot::before { background: currentColor; opacity: 0.4; animation: tile-dot-pulse 2s ease-out infinite; }
+.tile-dot::after { inset: 3px; background: currentColor; box-shadow: 0 0 4px rgba(0, 0, 0, 0.5); }
+.tile-dot.ok { color: var(--bs-success); }
+.tile-dot.bad { color: var(--bs-danger); }
 
 @keyframes tile-dot-pulse {
   0% { transform: scale(0.55); opacity: 0.5; }
@@ -181,95 +114,20 @@
   100% { opacity: 0; }
 }
 
-.live-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; width: 100%; align-items: center; }
-.live-frame { background: #000; border-radius: 8px; display: flex; justify-content: center; width: 100%; }
-.live-image { max-width: 100%; max-height: 76vh; display: block; border-radius: 8px; }
-.live-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; width: 100%; max-width: 960px; }
-.live-name { font-weight: 600; font-size: 13px; }
-.chips { display: flex; gap: 6px; }
-.chip { border: 1px solid var(--ok); color: var(--ok); border-radius: 4px; padding: 0 6px; }
-.chip.bad { border-color: var(--accent); color: var(--accent); }
-.chip.warn { border-color: var(--warn); color: var(--warn); }
+.live-frame { background: #000; display: flex; justify-content: center; width: 100%; border-radius: var(--bs-border-radius); }
+.live-image { max-width: 100%; max-height: 76vh; display: block; border-radius: var(--bs-border-radius); }
 
-/* ---- sağ: canlı ihlaller ---- */
-.violations-panel { display: flex; flex-direction: column; min-height: 0; }
-.live-list { overflow-y: auto; max-height: 70vh; display: flex; flex-direction: column; gap: 6px; }
-
-.vrow {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  background: var(--raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.vrow.fresh { outline: 2px solid var(--accent); }
-.vrow img { width: 56px; height: 40px; object-fit: cover; border-radius: 4px; background: #000; }
-.vrow .queued {
-  width: 56px; height: 40px; border: 1px dashed var(--accent); border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; color: var(--accent); text-align: center;
-}
-.vrow .conf { color: var(--accent); font-weight: 600; }
-.empty { margin: 6px 0 0; }
-
-.vrow-actions { display: flex; align-items: center; gap: 4px; }
-.btn-sm { padding: 1px 5px; font-size: 11px; border-radius: 4px; align-self: center; flex: none; }
-.btn-approve { border-color: var(--ok); color: var(--ok); }
-.btn-approve:hover { border-color: var(--ok); }
-
-/* ---- alt: ihlal kayıtları ---- */
-.violation-log { margin: 0 18px 18px; }
-.violation-log summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin: 10px 0; font-size: 12px; color: var(--muted); }
-.filters label { display: flex; flex-direction: column; gap: 2px; }
-.btn-danger { border-color: var(--accent); color: var(--accent); }
-.btn-danger:hover { background: var(--accent); color: #fff; }
-
-tbody tr { cursor: pointer; }
-tbody tr:hover { background: var(--raised); }
-td img { width: 56px; height: 36px; object-fit: cover; border-radius: 4px; }
-
-.pager { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; }
-
-/* ---- kanıt modalı ---- */
-#evidence {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  padding: 12px;
-  max-width: 94vw;
-}
-#evidence::backdrop { background: rgba(0, 0, 0, 0.7); }
-.evidence-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.evidence-body { display: flex; gap: 10px; align-items: flex-start; }
+/* ---- kanıt modalı: tespit kutusu overlay'i (Bootstrap'ta karşılığı yok) ---- */
 .evidence-frame { position: relative; line-height: 0; }
-.evidence-frame img { max-width: 76vw; max-height: 72vh; display: block; }
-.evidence-box { position: absolute; border: 2px solid var(--accent); pointer-events: none; }
-.evidence-crop { max-width: 220px; border-radius: 6px; }
-.evidence-meta { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.evidence-frame img { max-width: 100%; max-height: 55vh; display: block; }
+.evidence-box { position: absolute; border: 2px solid var(--bs-danger); pointer-events: none; }
 
-/* ---- kamera yönetimi modalı ---- */
-#cameras-dialog {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  padding: 12px;
-  min-width: 560px;
-  max-width: 94vw;
-}
-#cameras-dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+/* ---- kamera yönetimi: URI hücresini kısalt ---- */
+.cam-uri { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.cam-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted); }
-.cam-form input { display: block; margin-top: 2px; min-width: 120px; }
-tr.editing { outline: 1px solid var(--ok); }
-.cam-uri { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
+/* ---- gpu/zamanlama metrik dropdown'u — konumlandırma; görünüm Bootstrap'ın
+   dropdown-menu sınıfından geliyor (bkz. MetricsPanel.jsx) ---- */
+.metrics-dropdown { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; width: 360px; max-width: 88vw; max-height: 80vh; overflow-y: auto; }
 
 /* ---- odak modu: "tam ekran" — navbar/paneller/log gizlenir, sahne dolar ---- */
 .app.focus-mode { height: 100vh; }
@@ -277,7 +135,7 @@ tr.editing { outline: 1px solid var(--ok); }
 .app.focus-mode .stage { padding: 0; border-radius: 0; height: 100vh; }
 .app.focus-mode .live-frame { height: 100vh; border-radius: 0; }
 .app.focus-mode .live-image { max-width: 100vw; max-height: 100vh; width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
-.app.focus-mode .grid { height: 100vh; }
+.app.focus-mode .camera-grid { height: 100vh; }
 
 @media (max-width: 1200px) {
   .layout.cam-open, .layout.vio-open, .layout.cam-open.vio-open { grid-template-columns: 1fr; }

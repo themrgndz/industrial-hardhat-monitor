@@ -1,51 +1,27 @@
-:root {
-  /* Nötr koyu gri tema — mavimsi slate YOK, tamamen zinc/gray tonları. */
-  --bg: #19191c;
-  --panel: #232326;
-  --panel-2: #2a2a2e;
-  --raised: #0f0f11;
-  --text: #e5e5e7;
-  --muted: #9a9aa1;
-  --border: #38383d;
-  --accent: #ef4444;
-  --ok: #22c55e;
-  --warn: #eab308;
-  --nav-h: 52px;
-}
+/* Bootstrap'in kendi tema değişkenleri üzerinden marka renkleri — özel sınıf
+   yazmak yerine Bootstrap'in öngördüğü resmi özelleştirme yöntemi budur.
+   data-bs-theme="dark" index.html'de <html> üzerinde ayarlı. */
+[data-bs-theme="dark"] {
+  --bs-body-bg: #0a0d12;
+  --bs-body-color: #eceef2;
+  --bs-secondary-bg: #12161d;
+  --bs-tertiary-bg: #1b212b;
+  --bs-border-color: #262c37;
+  --bs-emphasis-color: #ffffff;
 
-* { box-sizing: border-box; }
+  --bs-primary: #4c8dff;
+  --bs-primary-rgb: 76, 141, 255;
+  --bs-danger: #f2415f;
+  --bs-danger-rgb: 242, 65, 95;
+  --bs-success: #2fd180;
+  --bs-success-rgb: 47, 209, 128;
+  --bs-warning: #f2a93c;
+  --bs-warning-rgb: 242, 169, 60;
+
+  --bs-link-color: var(--bs-primary);
+  --bs-link-hover-color: #7badff;
+}
 
 html, body, #root { height: 100%; margin: 0; }
-
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-button {
-  background: var(--raised);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 10px;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
-button:hover { border-color: var(--muted); }
-button:disabled { opacity: 0.45; cursor: default; }
-
-input, select {
-  background: var(--raised);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 3px 6px;
-  font: inherit;
-}
-
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--border); }
-
+body { font-size: 14px; }
 [hidden] { display: none !important; }

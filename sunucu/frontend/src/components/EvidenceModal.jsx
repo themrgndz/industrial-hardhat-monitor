@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fmt } from "../format.js";
 import { evidenceCropUrl, evidenceImageUrl } from "../api/backend.js";
 
-export default function EvidenceModal({ evidence, onClose, onReview }) {
+export default function EvidenceModal({ evidence, onClose, onReview, onAdvance }) {
   const dialogRef = useRef(null);
   const imgRef = useRef(null);
   const [box, setBox] = useState(null);
@@ -39,18 +39,22 @@ export default function EvidenceModal({ evidence, onClose, onReview }) {
   }, [evidence]);
 
   return (
-    <dialog id="evidence" ref={dialogRef} onClose={onClose}>
+    <dialog ref={dialogRef} onClose={onClose} className="modal-content panel-blur p-0" style={{ width: 880, maxWidth: "94vw" }}>
       {evidence && (
         <>
-          <div className="evidence-head">
-            <strong>{evidence.cameraLabel} — {fmt.format(new Date(evidence.detectedAt))}</strong>
-            <span className="spacer" />
-            <button type="button" onClick={() => { onReview(evidence.id, "CONFIRMED"); onClose(); }}>İhlal</button>
-            <button type="button" onClick={() => { onReview(evidence.id, "REJECTED"); onClose(); }}>İhlal değil</button>
-            <button type="button" onClick={onClose}>Kapat</button>
+          <div className="modal-header border-bottom flex-nowrap gap-2">
+            <div className="text-truncate" style={{ minWidth: 0, flex: "1 1 auto" }}>
+              <strong>{evidence.cameraLabel}</strong>
+              <span className="text-secondary small ms-2">{fmt.format(new Date(evidence.detectedAt))}</span>
+            </div>
+            <div className="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+              <button type="button" className="btn btn-sm btn-outline-success" onClick={() => { onReview(evidence.id, "CONFIRMED"); onAdvance(); }}>İhlal</button>
+              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => { onReview(evidence.id, "REJECTED"); onAdvance(); }}>İhlal değil</button>
+              <button type="button" className="btn-close btn-close-white" onClick={onClose} aria-label="Kapat" />
+            </div>
           </div>
-          <div className="evidence-body">
-            <div className="evidence-frame">
+          <div className="modal-body d-flex flex-column align-items-center gap-3">
+            <div className="evidence-frame rounded overflow-hidden bg-black">
               {!imgError && (
                 <img
                   ref={imgRef}
@@ -61,12 +65,23 @@ export default function EvidenceModal({ evidence, onClose, onReview }) {
                 />
               )}
               {box && <div className="evidence-box" style={box} />}
-              {imgError && <p className="error">kanıt görseli bulunamadı</p>}
+              {imgError && <p className="text-danger m-3">kanıt görseli bulunamadı</p>}
             </div>
-            {evidence.hasCrop && <img className="evidence-crop" alt="ihlal kırpma" src={evidenceCropUrl(evidence.id)} />}
+
+            {evidence.hasCrop && (
+              <div className="text-center">
+                <div className="text-secondary small mb-1">Kırpılmış görüntü</div>
+                <img
+                  className="rounded border"
+                  style={{ maxWidth: 180, maxHeight: 140, objectFit: "cover" }}
+                  alt="ihlal kırpma"
+                  src={evidenceCropUrl(evidence.id)}
+                />
+              </div>
+            )}
           </div>
-          <div className="evidence-meta">
-            kamera: {evidence.cameraLabel} · {new Date(evidence.detectedAt).toISOString()} · güven %{Math.round(evidence.confidence * 100)} · track {evidence.trackId}
+          <div className="modal-footer justify-content-start text-secondary small">
+            güven %{Math.round(evidence.confidence * 100)} · track {evidence.trackId} · {new Date(evidence.detectedAt).toISOString()}
           </div>
         </>
       )}

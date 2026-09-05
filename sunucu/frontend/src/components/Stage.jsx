@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { countsFor, dotClass } from "../hooks/useCameraHub.js";
 import { liveUrl, snapshotUrl } from "../api/detector.js";
+import MetricsPanel from "./MetricsPanel.jsx";
 
 const VIOLATION_LABEL = "No-Helmet Head";
 
@@ -12,16 +13,36 @@ const SOURCE_H = 1080;
 // kopmuşsa ekranda eski, yanıltıcı noktalar asılı kalmasın).
 const STALE_MS = 15000;
 
-function TileDots({ analysis, minConfidence }) {
+// Kutucuk resmi object-fit:cover ile gösteriliyor — kutucuğun en/boy oranı
+// kaynak karenin (16:9) oranından farklıysa görüntü kırpılıp ortalanır.
+// Nokta konumunu düz yüzdeyle (x/SOURCE_W) hesaplamak bu kırpmayı yok
+// sayıyordu, bu yüzden küçük kutucuklarda noktalar kişilerden bağımsız,
+// kaymış yerlerde görünüyordu. Burada gerçek kutucuk boyutuna göre görünen
+// (kırpılmış) kaynak alanını hesaplayıp noktayı ona göre ölçekliyoruz.
+function TileDots({ analysis, minConfidence, tileW, tileH }) {
   if (!analysis || Date.now() - analysis.receivedAt > STALE_MS) return null;
   const dets = (analysis.detections || []).filter((d) => d.confidence >= minConfidence);
-  if (dets.length === 0) return null;
+  if (dets.length === 0 || !tileW || !tileH) return null;
+
+  const sourceAspect = SOURCE_W / SOURCE_H;
+  const tileAspect = tileW / tileH;
+  let visW = SOURCE_W, visH = SOURCE_H, offX = 0, offY = 0;
+  if (tileAspect > sourceAspect) {
+    // kutucuk kaynaktan daha geniş oranlı -> üst/alt kırpılır
+    visH = SOURCE_W / tileAspect;
+    offY = (SOURCE_H - visH) / 2;
+  } else {
+    // kutucuk kaynaktan daha dar oranlı -> sağ/sol kırpılır
+    visW = SOURCE_H * tileAspect;
+    offX = (SOURCE_W - visW) / 2;
+  }
+
   return (
     <div className="tile-dots">
       {dets.map((d, i) => {
         const [x, y, w, h] = d.bbox;
-        const cx = ((x + w / 2) / SOURCE_W) * 100;
-        const cy = ((y + h / 2) / SOURCE_H) * 100;
+        const cx = ((x + w / 2 - offX) / visW) * 100;
+        const cy = ((y + h / 2 - offY) / visH) * 100;
         const bad = d.label === VIOLATION_LABEL;
         return (
           <span
@@ -35,18 +56,64 @@ function TileDots({ analysis, minConfidence }) {
   );
 }
 
-function Tile({ cam, onSelect, analysis, minConfidence }) {
-  const ref = useRef(null);
+// Detector'dan saniyede birkaç kez "analysis" SSE olayı geliyor (her kamera
+// için ayrı), her seferinde TÜM analysisByCamera nesnesi yeniden yaratılıyor
+// (bkz. useCameraHub.js). memo olmadan bu, 8-12 kutucuğun TAMAMININ her
+// olayda yeniden render edilmesine yol açıyordu — ana ekranda gözle görülür
+// takılma ("5 fps gibi") buradan geliyordu. memo + özel karşılaştırıcı ile
+// yalnız verisi gerçekten değişen kutucuk yeniden render edilir. onSelect
+// kasıtlı olarak karşılaştırmaya dahil değil: App'teki handleSelect her
+// render'da yeniden yaratılıyor ama içindeki hub.selectCamera/log.setCameraId
+// çağrıları zaten kararlı state setter'lara dayanıyor, "eski" bir kapanış
+// kullanmak tıklama davranışını bozmaz.
+function tilePropsEqual(prev, next) {
+  return (
+    prev.analysis === next.analysis &&
+    prev.minConfidence === next.minConfidence &&
+    prev.cam.id === next.cam.id &&
+    prev.cam.name === next.cam.name &&
+    prev.cam.connected === next.cam.connected &&
+    prev.cam.active === next.cam.active
+  );
+}
+
+const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
+  const btnRef = useRef(null);
+  const imgRef = useRef(null);
+  const widthRef = useRef(480);
+  const [tileSize, setTileSize] = useState({ w: 0, h: 0 });
+
+  // Kutucuk boyutu kamera sayısına/pencere genişliğine göre değişir (grid 4
+  // sütun sabit, satır sayısı adapte olur) — sabit büyük genişlik (ör. 1920)
+  // az kamerada gereksiz, çok kamerada (8-12) eşzamanlı büyük JPEG isteği
+  // detector'ı ve tarayıcıyı zorlayıp akışı kasıtıyordu. Gerçek render
+  // boyutuna (device pixel ratio dahil) göre istek atarak hem net hem hafif
+  // kalır; kamera sayısı arttıkça kutucuk küçülür, istek boyutu da otomatik
+  // küçülür. Aynı ölçüm, nokta overlay'inin kırpma hesabı için de kullanılır.
+  useEffect(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const dpr = window.devicePixelRatio || 1;
+    function measure() {
+      const w = Math.round(btn.clientWidth * dpr);
+      if (w > 0) widthRef.current = Math.min(SOURCE_W, Math.max(320, w));
+      setTileSize({ w: btn.clientWidth, h: btn.clientHeight });
+    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(btn);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
-    const img = ref.current;
+    const img = imgRef.current;
     if (!img) return;
     let cancelled = false;
     function tick() {
       if (cancelled) return;
       img.onerror = () => { img.style.visibility = "hidden"; };
       img.onload = () => { img.style.visibility = ""; };
-      img.src = snapshotUrl(cam.id, 480);
+      img.src = snapshotUrl(cam.id, widthRef.current);
     }
     tick();
     const timer = setInterval(tick, 2000);
@@ -57,37 +124,37 @@ function Tile({ cam, onSelect, analysis, minConfidence }) {
   }, [cam.id]);
 
   return (
-    <button type="button" className="tile" onClick={() => onSelect(cam.id)}>
-      <img ref={ref} alt="önizleme" />
-      <TileDots analysis={analysis} minConfidence={minConfidence} />
+    <button type="button" ref={btnRef} className="tile" onClick={() => onSelect(cam.id)}>
+      <img ref={imgRef} alt="önizleme" />
+      <TileDots analysis={analysis} minConfidence={minConfidence} tileW={tileSize.w} tileH={tileSize.h} />
       <span className="tile-label">
-        <span className={`dot ${dotClass(cam)}`} />
-        <span className="nm">{cam.connected ? cam.name : `${cam.name} — bağlantı yok`}</span>
+        <span className={`status-dot ${dotClass(cam)}`} />
+        <span>{cam.connected ? cam.name : `${cam.name} — bağlantı yok`}</span>
       </span>
     </button>
   );
-}
+}, tilePropsEqual);
 
 function LiveCounts({ analysis, activeId, minConfidence }) {
   const relevant = analysis && analysis.cameraId === activeId;
   const counts = relevant ? countsFor(analysis.detections, minConfidence) : null;
   if (!counts || Object.keys(counts).length === 0) {
-    return <span className="muted">çıkarım: {analysis ? `${analysis.inferenceMs} ms` : "—"}</span>;
+    return <span className="text-secondary small">çıkarım: {analysis ? `${analysis.inferenceMs} ms` : "—"}</span>;
   }
   return (
     <>
-      <span className="chips">
-        {Object.entries(counts).map(([label, n]) => (
-          <span key={label} className={`chip ${label === VIOLATION_LABEL ? "bad" : ""}`}>{label}: {n}</span>
-        ))}
-      </span>
-      <span className="muted">çıkarım: {analysis.inferenceMs} ms</span>
+      {Object.entries(counts).map(([label, n]) => (
+        <span key={label} className={`badge ${label === VIOLATION_LABEL ? "text-bg-danger" : "text-bg-success"}`}>
+          {label} × {n}
+        </span>
+      ))}
     </>
   );
 }
 
 export default function Stage({
   cameras, active, analysis, analysisByCamera, minConfidence, onSelect, onClose, onFullscreen,
+  metricsView, metrics, metricsOk, gpuHistory, onSetBatchSize, batchBusy,
 }) {
   const liveRef = useRef(null);
   const [labelsOn, setLabelsOn] = useState(true);
@@ -103,10 +170,21 @@ export default function Stage({
     }
   }, [active, labelsOn]);
 
-  if (!active) {
+  if (metricsView) {
     return (
-      <section className="panel stage">
-        <div className="grid">
+      <section className="card stage" style={{ alignItems: "stretch", justifyContent: "flex-start", overflowY: "auto" }}>
+        <h2 className="h5 mb-3">Sistem Kullanımı</h2>
+        <MetricsPanel metrics={metrics} ok={metricsOk} gpuHistory={gpuHistory} onSetBatchSize={onSetBatchSize} batchBusy={batchBusy} />
+      </section>
+    );
+  }
+
+  if (!active) {
+    const cols = 4;
+    const rows = Math.min(4, Math.max(1, Math.ceil(cameras.length / cols)));
+    return (
+      <section className="card stage">
+        <div className="camera-grid" style={{ "--grid-cols": cols, "--grid-rows": rows }}>
           {cameras.map((cam) => (
             <Tile
               key={cam.id} cam={cam} onSelect={onSelect}
@@ -119,20 +197,20 @@ export default function Stage({
   }
 
   return (
-    <section className="panel stage">
-      <div className="live-wrap">
-        <div className="live-frame">
+    <section className="card stage">
+      <div className="d-flex flex-column gap-2 w-100 align-items-center">
+        <div className="live-frame rounded">
           <img ref={liveRef} className="live-image" alt="canlı görüntü" />
         </div>
-        <div className="live-bar">
-          <span className="live-name">{active.name}</span>
+        <div className="d-flex align-items-center gap-2 flex-wrap w-100" style={{ maxWidth: 960 }}>
+          <span className="fw-semibold">{active.name}</span>
           <LiveCounts analysis={analysis} activeId={active.id} minConfidence={minConfidence} />
-          <span className="spacer" />
-          <button type="button" onClick={() => setLabelsOn((v) => !v)}>
+          <span className="flex-grow-1" />
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setLabelsOn((v) => !v)}>
             {labelsOn ? "Etiketleri Gizle" : "Etiketleri Göster"}
           </button>
-          <button type="button" onClick={onFullscreen}>Tam ekran</button>
-          <button type="button" onClick={onClose}>Kapat</button>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onFullscreen}>Tam ekran</button>
+          <button type="button" className="btn btn-sm btn-outline-danger" onClick={onClose}>Kapat</button>
         </div>
       </div>
     </section>

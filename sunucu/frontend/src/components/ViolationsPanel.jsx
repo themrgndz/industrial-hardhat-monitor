@@ -1,41 +1,49 @@
 import { timeFmt } from "../format.js";
 import { evidenceCropUrl, evidenceImageUrl } from "../api/backend.js";
 
-function Row({ v, cameraName, onReview, onOpenEvidence }) {
+function toEvidence(v, cameraName) {
+  return {
+    id: v.backendId,
+    cameraLabel: cameraName,
+    detectedAt: v.detectedAt,
+    confidence: v.confidence,
+    bbox: v.bbox,
+    trackId: v.trackId,
+    hasCrop: !!v.localCrop,
+  };
+}
+
+function Row({ v, cameraName, evidenceList, evidenceIndex, onReview, onOpenEvidence }) {
   return (
     <div
-      className={`vrow ${v._fresh ? "fresh" : ""}`}
+      className={`list-group-item d-flex align-items-center gap-2 ${v._fresh ? "border-danger border-2" : ""}`}
       title="çift tıkla → kanıt görüntüsü"
       onDoubleClick={() => {
         if (!v.backendId) return;
-        onOpenEvidence({
-          id: v.backendId,
-          cameraLabel: cameraName,
-          detectedAt: v.detectedAt,
-          confidence: v.confidence,
-          bbox: v.bbox,
-          trackId: v.trackId,
-          hasCrop: !!v.localCrop,
-        });
+        onOpenEvidence(evidenceList, evidenceIndex);
       }}
     >
       {v.backendId ? (
         <img
           src={v.localCrop ? evidenceCropUrl(v.backendId) : evidenceImageUrl(v.backendId)}
           alt="ihlal"
+          className="rounded"
+          style={{ width: 56, height: 40, objectFit: "cover" }}
         />
       ) : (
-        <div className="queued">kuyrukta</div>
+        <div className="border border-danger rounded d-flex align-items-center justify-content-center text-danger text-center" style={{ width: 56, height: 40, fontSize: 10 }}>
+          kuyrukta
+        </div>
       )}
-      <div>
+      <div className="flex-grow-1 small">
         {cameraName} · {timeFmt.format(new Date(v.detectedAt))}
-        {!v.backendId && <div className="muted">backend'e yazılmadı</div>}
+        {!v.backendId && <div className="text-secondary">backend'e yazılmadı</div>}
       </div>
-      <div className="vrow-actions">
-        <span className="conf">%{Math.round(v.confidence * 100)}</span>
+      <div className="d-flex align-items-center gap-1">
+        <span className="badge text-bg-danger">%{Math.round(v.confidence * 100)}</span>
         <button
           type="button"
-          className="btn-sm btn-approve"
+          className="btn btn-sm btn-outline-success"
           disabled={!v.backendId}
           title={v.backendId ? "Onayla (ihlal)" : "Henüz backend'e yazılmadı"}
           onClick={(e) => { e.stopPropagation(); onReview(v.backendId, "CONFIRMED"); }}
@@ -44,7 +52,7 @@ function Row({ v, cameraName, onReview, onOpenEvidence }) {
         </button>
         <button
           type="button"
-          className="btn-sm"
+          className="btn btn-sm btn-outline-secondary"
           disabled={!v.backendId}
           title={v.backendId ? "Reddet" : "Henüz backend'e yazılmadı"}
           onClick={(e) => { e.stopPropagation(); onReview(v.backendId, "REJECTED"); }}
@@ -57,21 +65,29 @@ function Row({ v, cameraName, onReview, onOpenEvidence }) {
 }
 
 export default function ViolationsPanel({ open, rows, lastHour, cameraById, onReview, onOpenEvidence }) {
+  const nameFor = (v) => cameraById(v.cameraId)?.name || v.cameraName || v.cameraId;
+  const openable = rows.filter((v) => v.backendId);
+  const evidenceList = openable.map((v) => toEvidence(v, nameFor(v)));
   return (
-    <aside className={`panel violations-panel ${open ? "" : "collapsed"}`}>
-      <h2>Canlı İhlaller <span className="muted">son 1 saat: {lastHour ?? "—"}</span></h2>
-      <div className="live-list">
+    <aside className={`violations-panel card panel-blur ${open ? "" : "collapsed"}`}>
+      <div className="card-header d-flex align-items-baseline gap-2">
+        <h2 className="h6 mb-0">Canlı İhlaller</h2>
+        <span className="text-secondary small">son 1 saat: {lastHour ?? "—"}</span>
+      </div>
+      <div className="card-body live-list list-group list-group-flush d-flex flex-column gap-2">
         {rows.map((v) => (
           <Row
             key={v._key}
             v={v}
-            cameraName={cameraById(v.cameraId)?.name || v.cameraName || v.cameraId}
+            cameraName={nameFor(v)}
+            evidenceList={evidenceList}
+            evidenceIndex={openable.indexOf(v)}
             onReview={onReview}
             onOpenEvidence={onOpenEvidence}
           />
         ))}
+        {rows.length === 0 && <p className="text-secondary small mb-0">henüz ihlal yok</p>}
       </div>
-      {rows.length === 0 && <p className="muted empty">henüz ihlal yok</p>}
     </aside>
   );
 }
