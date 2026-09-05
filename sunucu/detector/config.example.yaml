@@ -1,0 +1,73 @@
+# Kamera listesi ayrı bir JSON dosyasında tutulur; parolalar bu dosyaya gömülür
+# ve cameras.json .gitignore'dadır. Örnek içerik (cameras.json):
+#   [
+#     {"id":"cam-1","name":"Kamera 1","uri":"rtsp://127.0.0.1:8554/cam-1","preview_uri":""},
+#     {"id":"cam-2","name":"Kamera 2","uri":"rtsp://127.0.0.1:8554/cam-2","preview_uri":""},
+#     {"id":"cam-3","name":"Kamera 3","uri":"rtsp://127.0.0.1:8554/cam-3","preview_uri":""},
+#     {
+#       "id": "cam-live-1",
+#       "name": "Tersane (canlı)",
+#       "uri": "rtsp://<kullanici>:<parola>@<nvr-ip>:<port>/cam/realmonitor?channel=1&subtype=0",
+#       "preview_uri": ""
+#     }
+#   ]
+cameras_file: "cameras.json"
+
+stream:
+  read_fail_threshold: 30                # ardışık başarısız read() sonrası yeniden bağlan
+  reconnect_backoff_initial_s: 1.0
+  reconnect_backoff_max_s: 30.0
+  idle_timeout_s: 20.0                   # izleyici yok + tarama gerekmiyorsa okuyucuyu kapat
+
+capture:
+  fps: 1.0                               # spec: tam 1 FPS işleme
+  continuous: false                      # true → çıkarım biter bitmez yeni kare (sunucu modu)
+  batch_size: 1                          # her turda kaç kamera aynı anda tek GPU çağrısında işlensin
+
+monitoring:
+  mode: "selected"                       # selected = yalnız açık kamera | all = tüm kameralar sırayla
+
+server:
+  host: "127.0.0.1"
+  port: 8090
+  preview_width: 480
+  preview_jpeg_quality: 70
+  live_width: 1280
+  live_jpeg_quality: 75
+  live_fps: 10.0
+
+model:
+  path: "detector/models/best.pt"
+  device: "cuda:0"
+  violation_class: "No-Helmet Head"      # modelin gerçek sınıf adı (best.pt: {0:'Helmet',1:'No-Helmet Head'})
+  thresholds:
+    "No-Helmet Head": 0.35
+    "Helmet": 0.30
+
+sahi:
+  slice_height: 768
+  slice_width: 768
+  overlap_ratio: 0.2
+  postprocess_match_threshold: 0.5
+  upscale_factor: 1.0                    # kare LANCZOS4 ile büyütülür (SAHI dilimlemeden önce); 1.0 = kapalı
+  enabled: true                          # false → dilimleme tamamen kapalı, kare tek geçişte modele verilir
+  full_frame_pass: true                  # dilimlere ek olarak tam kare geçişi de yapılsın mı
+
+tracking:
+  iou_threshold: 0.15
+  max_age_seconds: 10.0                  # kare işleme aralığından bağımsız, gerçek süre (saniye)
+  confirm_frames: 1                      # ilk tespitte hemen ihlal panele düşsün; onay/red insan kararı
+  cooldown_seconds: 60
+
+logging:
+  dir: "logs/ihlal"                      # {gün.ay.yıl}/{kamera}/ alt klasörlenir
+  jsonl_name: "violations.jsonl"
+  crop_padding_ratio: 0.4                # bbox kenar uzunluğunun oranı kadar pay
+  jpeg_quality: 90
+
+backend:
+  enabled: true                          # false ise yalnız yerel JSONL + görsel
+  url: "http://127.0.0.1:8080"
+  api_key: "change-me-generate-32-hex"   # .env'deki BACKEND_API_KEY ile AYNI olmalı
+  timeout_seconds: 5.0
+  retry_interval_seconds: 30.0

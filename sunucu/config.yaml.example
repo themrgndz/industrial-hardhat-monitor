@@ -1,0 +1,76 @@
+# Bu, sunucu/config.yaml'ın örnek/şablon halidir — gerçek dosya gitignore'da
+# (backend.api_key gerçek bir sırdır, git'e girmemeli). Kurulumda bu dosyayı
+# `config.yaml` olarak kopyalayıp api_key'i .env'deki BACKEND_API_KEY ile
+# AYNI, kendi ürettiğiniz bir değerle değiştirin.
+#
+# Kamera listesi ayrı bir JSON dosyasında tutulur (parola içerebilir).
+# Dosya yoksa boş liste olarak başlar; POST /api/cameras ile çalışma anında
+# eklenebilir, DELETE /api/cameras/{id} ile kaldırılabilir.
+cameras_file: "cameras.json"
+
+stream:
+  read_fail_threshold: 30                # ardışık başarısız read() sonrası yeniden bağlan
+  reconnect_backoff_initial_s: 1.0
+  reconnect_backoff_max_s: 30.0
+  idle_timeout_s: 20.0                   # izleyici yok + tarama gerekmiyorsa okuyucuyu kapat
+
+capture:
+  fps: 0.25                              # artık sabit slot değil, "hedef" tavan: continuous=true modda
+                                          # her kamera turu bu değerin (4s) altında kalırsa /api/metrics
+                                          # "yetişiyor" der (bkz. metrics.py SchedulerStats).
+  continuous: true                       # true → bir grubun çıkarımı biter bitmez hemen sıradaki gruba
+                                          # geçilir (sabit bekleme yok). GPU boştaki süreyi de kullanır.
+  batch_size: 3                          # her turda kaç kamera AYNI ANDA tek GPU çağrısında işlensin
+                                          # (round-robin GRUP halinde ilerler); arayüzden de canlı
+                                          # ayarlanabilir (bkz. POST /api/capture), bu yalnız başlangıç
+                                          # değeri.
+
+monitoring:
+  mode: "all"                            # all = tüm kameralar round-robin ile sırayla işlenir (kamera N ise her biri 4s/N'de bir)
+
+server:
+  host: "127.0.0.1"
+  port: 8090
+  preview_width: 480
+  preview_jpeg_quality: 70
+  live_width: 1280
+  live_jpeg_quality: 75
+  live_fps: 10.0
+
+model:
+  path: "detector/models/best.pt"
+  device: "cuda:0"
+  violation_class: "No-Helmet Head"      # modelin gerçek sınıf adı (best.pt: {0:'Helmet',1:'No-Helmet Head'})
+  thresholds:
+    "No-Helmet Head": 0.35
+    "Helmet": 0.30
+
+sahi:
+  slice_height: 768
+  slice_width: 768
+  overlap_ratio: 0.2
+  postprocess_match_threshold: 0.5
+  upscale_factor: 1.0                    # denendi, fayda yok, kapalı
+  enabled: false                         # false → dilimleme tamamen kapalı, kare tek geçişte modele verilir
+  full_frame_pass: true                  # dilimlere ek olarak tam kare geçişi de yapılsın mı
+
+tracking:
+  iou_threshold: 0.15                    # küçük kutularda (17x17px gibi) birkaç pikselik kayma bile
+                                          # IoU'yu düşürüp gereksiz yeni track/ihlal açabiliyordu
+  max_age_seconds: 10.0                  # kare işleme aralığından bağımsız, GERÇEK SÜRE (saniye) ile
+                                          # ölçülür.
+  confirm_frames: 1                      # ilk analizde hemen ihlal panele düşsün; onay/red insan kararı
+  cooldown_seconds: 60                   # aynı track için tekrar tekrar loglamayı önler
+
+logging:
+  dir: "logs/ihlal"                      # içeride {gün.ay.yıl}/{kamera}/ alt klasörlenir
+  jsonl_name: "violations.jsonl"
+  crop_padding_ratio: 0.4                # bbox kenar uzunluğunun oranı kadar pay
+  jpeg_quality: 90
+
+backend:
+  enabled: true                          # false ise yalnız yerel JSONL + görsel
+  url: "http://127.0.0.1:8080"
+  api_key: "change-me-generate-32-hex"   # .env'deki BACKEND_API_KEY ile AYNI olmalı
+  timeout_seconds: 5.0
+  retry_interval_seconds: 30.0

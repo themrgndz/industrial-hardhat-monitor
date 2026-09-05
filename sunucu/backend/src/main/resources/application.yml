@@ -1,0 +1,28 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/ppe
+    username: ${PG_USER}
+    password: ${PG_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true          # her istekte tarayıcı revalidate etsin — UI dosyası
+                                   # güncellenince tarayıcı eski style.css/app.js'i
+                                   # göstermeye devam ediyordu (ölçüldü, kullanıcı bildirdi)
+app:
+  api-key: ${BACKEND_API_KEY}
+  storage-root: ${STORAGE_ROOT:storage}

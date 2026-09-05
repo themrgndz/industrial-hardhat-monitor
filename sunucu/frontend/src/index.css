@@ -1,0 +1,51 @@
+:root {
+  /* Nötr koyu gri tema — mavimsi slate YOK, tamamen zinc/gray tonları. */
+  --bg: #19191c;
+  --panel: #232326;
+  --panel-2: #2a2a2e;
+  --raised: #0f0f11;
+  --text: #e5e5e7;
+  --muted: #9a9aa1;
+  --border: #38383d;
+  --accent: #ef4444;
+  --ok: #22c55e;
+  --warn: #eab308;
+  --nav-h: 52px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  background: var(--raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+button:hover { border-color: var(--muted); }
+button:disabled { opacity: 0.45; cursor: default; }
+
+input, select {
+  background: var(--raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font: inherit;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--border); }
+
+[hidden] { display: none !important; }

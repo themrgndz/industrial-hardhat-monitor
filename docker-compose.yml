@@ -1,0 +1,76 @@
+# GPU sunucuda çalıştırma:
+#   1) NVIDIA driver + nvidia-container-toolkit host'ta kurulu olmalı
+#      (`docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi` çalışmalı).
+#   2) sunucu/.env (PG_*, BACKEND_API_KEY, ...), sunucu/cameras.docker.json,
+#      sunucu/config.docker.yaml, sunucu/detector/models/best.pt bu makinede
+#      hazır olmalı (hepsi gitignore'da — repo'dan gelmez, elle kopyalanır/scp).
+#      Bunlar detector/Dockerfile içine build-time COPY ile gömülür (host
+#      bind-mount değil — bazı Docker Desktop kurulumlarında (containerd
+#      snapshotter + Windows dosya paylaşımı) tek-dosya/host bind mount'lar
+#      boş dizin olarak görünüyor). cameras.docker.json ve logs/ihlal için
+#      named volume kullanılır (ilk çalıştırmada imajdaki içerikle dolar).
+#   3) docker compose up -d --build
+#   4) driver CUDA 12.4'ü desteklemiyorsa (nvidia-smi "CUDA Version" < 12.4):
+#      TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: sunucu/.env
+    environment:
+      POSTGRES_DB: ${PG_DB}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./sunucu
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: sunucu/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${PG_DB}
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_storage:/app/storage
+
+  detector:
+    build:
+      context: ./sunucu
+      dockerfile: detector/Dockerfile
+      args:
+        TORCH_BASE_IMAGE: ${TORCH_BASE_IMAGE:-pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PPE_CONFIG: /app/sunucu/config.docker.yaml
+    ports:
+      - "8090:8090"
+    volumes:
+      - detector_cameras:/app/sunucu/camera-state
+      - detector_logs:/app/sunucu/logs/ihlal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]
+
+volumes:
+  pgdata:
+  backend_storage:
+  detector_cameras:
+  detector_logs:

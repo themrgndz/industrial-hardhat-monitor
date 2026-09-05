@@ -1,0 +1,69 @@
+# Docker/GPU-sunucu için config.yaml varyantı — bu, gerçek config.docker.yaml'ın
+# örnek/şablon halidir (gerçek dosya gitignore'da, api_key gerçek bir sırdır).
+# Kurulumda bu dosyayı `config.docker.yaml` olarak kopyalayıp api_key'i
+# .env'deki BACKEND_API_KEY ile AYNI, kendi ürettiğiniz bir değerle değiştirin.
+#
+# Fark sadece iki satır:
+#   - server.host: 0.0.0.0   (127.0.0.1 konteyner dışından erişilemez)
+#   - backend.url: http://backend:8080   (compose service adı, 127.0.0.1 değil)
+# Geri kalanı sunucu/config.yaml ile birebir aynı tutulmalı.
+cameras_file: "camera-state/cameras.docker.json"       # host.docker.internal ile, cameras.json (native, 127.0.0.1) farklı
+
+stream:
+  read_fail_threshold: 30
+  reconnect_backoff_initial_s: 1.0
+  reconnect_backoff_max_s: 30.0
+  idle_timeout_s: 20.0
+
+capture:
+  fps: 0.25
+  continuous: true
+  batch_size: 3
+
+monitoring:
+  mode: "all"
+
+server:
+  host: "0.0.0.0"
+  port: 8090
+  preview_width: 480
+  preview_jpeg_quality: 70
+  live_width: 1280
+  live_jpeg_quality: 75
+  live_fps: 10.0
+
+model:
+  path: "detector/models/best.pt"
+  device: "cuda:0"
+  violation_class: "No-Helmet Head"
+  thresholds:
+    "No-Helmet Head": 0.35
+    "Helmet": 0.30
+
+sahi:
+  slice_height: 768
+  slice_width: 768
+  overlap_ratio: 0.2
+  postprocess_match_threshold: 0.5
+  upscale_factor: 1.0
+  enabled: false
+  full_frame_pass: true
+
+tracking:
+  iou_threshold: 0.15
+  max_age_seconds: 10.0
+  confirm_frames: 1
+  cooldown_seconds: 60
+
+logging:
+  dir: "logs/ihlal"
+  jsonl_name: "violations.jsonl"
+  crop_padding_ratio: 0.4
+  jpeg_quality: 90
+
+backend:
+  enabled: true
+  url: "http://backend:8080"
+  api_key: "change-me-generate-32-hex"
+  timeout_seconds: 5.0
+  retry_interval_seconds: 30.0

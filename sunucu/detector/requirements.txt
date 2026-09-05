@@ -1,0 +1,6 @@
+opencv-python>=4.12
+PyYAML
+requests
+torch==2.6.0
+ultralytics==8.4.108
+sahi>=0.12.6
