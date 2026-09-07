@@ -28,3 +28,5 @@ __pycache__/
 OTURUM-NOTU*.txt
 sunucu/OTURUM-NOTU.md
 sunucu/frontend/README.md
+sunucu/cameras.json
+sunucu/cameras.docker.json
