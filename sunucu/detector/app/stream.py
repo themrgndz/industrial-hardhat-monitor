@@ -14,6 +14,7 @@ from .config import StreamConfig
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PORTS = {"rtsp": 554, "rtsps": 322, "http": 80, "https": 443}
+_NETWORK_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://")
 
 # RTSP açılışı OpenCV'nin FFmpeg arka ucunda SERİLEŞTİRİLİYOR: erişilemez bir
 # adres, OpenCV'nin sabit 30 s'lik interrupt zaman aşımı dolana kadar sırayı
@@ -59,6 +60,22 @@ class StreamReader:
 
     def __init__(self, uri: str, cfg: StreamConfig) -> None:
         self._uri = uri
+        # Yerel video dosyası (test yayınları/kayıtlar): rtsp/http değilse
+        # dosyadır. EOF'ta ağ kaynaklarındaki gibi "bağlantı koptu" sayıp
+        # backoff'la yeniden açmak yerine konumu başa sarıp döngüde oynatılır
+        # (ölçüldü: yeniden açmak ffmpeg format probe'unu tekrarlıyor ve
+        # read_fail_threshold kadar boş okuma + backoff gecikmesi katıyordu —
+        # ekstra RTSP publish+decode turu olmadan da CPU'ya gereksiz yük).
+        self._is_file = not uri.lower().startswith(_NETWORK_SCHEMES)
+        # Dosya kaynağı gerçek zamanlı hızda oynatılır (ffmpeg `-re` eşdeğeri):
+        # cv2.read() diskten olabildiğince hızlı decode eder, sınırlanmazsa
+        # video birkaç kat hızlanmış görünür (ölçüldü: 8 s'de 2226+ kare —
+        # 25-30 fps kaynak için gerçek süreden ~9-11x hızlı). `_frame_interval`
+        # kaynağın kendi fps'inden hesaplanır, her kare bu aralığa göre
+        # zamanlanana kadar beklenir.
+        self._frame_interval: float | None = None
+        self._playback_start = 0.0
+        self._frame_count = 0
         self._fail_threshold = cfg.read_fail_threshold
         self._backoff_initial = cfg.reconnect_backoff_initial_s
         self._backoff_max = cfg.reconnect_backoff_max_s
@@ -86,20 +103,39 @@ class StreamReader:
         """Açılabilirse `VideoCapture`, adres erişilemezse `None`.
 
         `None` dönüşü `_run` döngüsünde başarısız okuma gibi işlenir; mevcut
-        backoff mantığı yeniden denemeyi zamanlar.
+        backoff mantığı yeniden denemeyi zamanlar. Yerel dosyalar için TCP
+        el sıkışması anlamsız, doğrudan açılır.
         """
-        if not tcp_reachable(self._uri):
+        if not self._is_file and not tcp_reachable(self._uri):
             logger.debug("stream(%s): adres erişilemez, açılış denenmiyor", self._uri)
             return None
         return cv2.VideoCapture(self._uri, cv2.CAP_FFMPEG)
 
+    def _reset_playback_clock(self) -> None:
+        """Dosya kaynağı için gerçek zamanlı oynatma referansını sıfırlar
+        (ilk açılışta ve her döngü başına sarmada çağrılır)."""
+        self._frame_count = 0
+        self._playback_start = time.monotonic()
+        if not self._is_file or self._cap is None:
+            self._frame_interval = None
+            return
+        fps = self._cap.get(cv2.CAP_PROP_FPS)
+        self._frame_interval = 1.0 / fps if fps and fps > 0 else None
+
     def _run(self) -> None:
         self._cap = self._open()
+        self._reset_playback_clock()
         fail_streak = 0
         reconnect_attempts = 0
         while not self._stop.is_set():
             ok, frame = self._cap.read() if self._cap is not None else (False, None)
             if ok and frame is not None:
+                if self._frame_interval:
+                    self._frame_count += 1
+                    target = self._playback_start + self._frame_count * self._frame_interval
+                    delay = target - time.monotonic()
+                    if delay > 0 and self._stop.wait(delay):
+                        break
                 with self._lock:
                     self._latest = frame
                     self._seq += 1
@@ -108,6 +144,13 @@ class StreamReader:
                 fail_streak = 0
                 reconnect_attempts = 0
                 continue
+
+            if self._is_file and self._cap is not None and self._cap.isOpened():
+                # False dönüşü burada bağlantı kaybı değil, dosya sonu (EOF)
+                # demek; başa sarıp döngüde oynatmaya devam et.
+                if self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0):
+                    self._reset_playback_clock()
+                    continue
 
             fail_streak += 1
             with self._lock:
@@ -123,6 +166,7 @@ class StreamReader:
                 if self._stop.wait(backoff):
                     break
                 self._cap = self._open()
+                self._reset_playback_clock()
                 reconnect_attempts += 1
                 fail_streak = 0
             else:

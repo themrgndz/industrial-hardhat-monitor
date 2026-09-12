@@ -42,7 +42,7 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
 
 .layout {
   display: grid;
-  grid-template-columns: 0 minmax(0, 1fr) 0;
+  grid-template-columns: minmax(0, 1fr) 0;
   gap: 12px;
   padding: 12px 18px;
   align-items: stretch;
@@ -50,25 +50,24 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
   min-height: 0;
   transition: grid-template-columns 0.2s ease;
 }
-.layout.cam-open { grid-template-columns: 250px minmax(0, 1fr) 0; }
-.layout.vio-open { grid-template-columns: 0 minmax(0, 1fr) 320px; }
-.layout.cam-open.vio-open { grid-template-columns: 250px minmax(0, 1fr) 320px; }
+.layout.vio-open { grid-template-columns: minmax(0, 1fr) 320px; }
 
-.camera-panel, .violations-panel {
+.violations-panel {
   overflow: hidden;
   transition: opacity 0.15s ease;
 }
-.camera-panel.collapsed, .violations-panel.collapsed {
+.violations-panel.collapsed {
   padding: 0;
   opacity: 0;
   pointer-events: none;
 }
 
-.camera-list, .live-list { overflow-y: auto; max-height: 74vh; }
+.live-list { overflow-y: auto; max-height: 74vh; }
+
 
 /* ---- panel bulanıklığı: Kameralar (Stage) hariç her panelin arkaplanı ---- */
 .panel-blur {
-  background: rgba(9, 11, 15, 0.72) !important;
+  background: rgba(12, 12, 13, 0.72) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -114,8 +113,22 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
   100% { opacity: 0; }
 }
 
-.live-frame { background: #000; display: flex; justify-content: center; width: 100%; border-radius: var(--bs-border-radius); }
+.live-frame { background: #000; display: flex; justify-content: center; width: 100%; border-radius: var(--bs-border-radius); position: relative; }
 .live-image { max-width: 100%; max-height: 76vh; display: block; border-radius: var(--bs-border-radius); }
+
+/* ---- canlı görünüm: sağ üst kapat + sol/sağ kamera geçiş okları (Bootstrap'ta karşılığı yok) ---- */
+.live-close {
+  position: absolute; top: 10px; right: 10px; z-index: 5;
+  width: 32px; height: 32px; padding: 0; line-height: 1;
+  border-radius: 50%; background: rgba(0, 0, 0, 0.55);
+}
+.live-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 44px; height: 44px; padding: 0; line-height: 1; font-size: 1.4rem;
+  border-radius: 50%; background: rgba(0, 0, 0, 0.4);
+}
+.live-nav-prev { left: 10px; }
+.live-nav-next { right: 10px; }
 
 /* ---- kanıt modalı: tespit kutusu overlay'i (Bootstrap'ta karşılığı yok) ---- */
 .evidence-frame { position: relative; line-height: 0; }
@@ -138,6 +151,6 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
 .app.focus-mode .camera-grid { height: 100vh; }
 
 @media (max-width: 1200px) {
-  .layout.cam-open, .layout.vio-open, .layout.cam-open.vio-open { grid-template-columns: 1fr; }
-  .camera-panel, .violations-panel { max-height: none; }
+  .layout.vio-open { grid-template-columns: 1fr; }
+  .violations-panel { max-height: none; }
 }

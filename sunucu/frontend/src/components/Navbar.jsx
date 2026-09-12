@@ -31,17 +31,14 @@ function SensitivityControl({ value, floor, onCommit }) {
 export default function Navbar({
   metrics,
   metricsOk,
-  camerasOpen,
   violationsOpen,
   metricsViewOpen,
   minConfidence,
   confidenceFloor,
   onSensitivityChange,
-  onToggleCameras,
   onToggleViolations,
   onToggleMetricsView,
-  onGenerateReport,
-  reportBusy,
+  onOpenAdmin,
   onToggleEngine,
   engineBusy,
   onBrandClick,
@@ -60,13 +57,6 @@ export default function Navbar({
       </button>
 
       <nav className="d-flex gap-2">
-        <button
-          type="button"
-          className={`btn btn-sm ${camerasOpen ? "btn-primary" : "btn-outline-secondary"}`}
-          onClick={onToggleCameras}
-        >
-          Kameralar
-        </button>
         <button
           type="button"
           className={`btn btn-sm ${violationsOpen ? "btn-primary" : "btn-outline-secondary"}`}
@@ -97,8 +87,8 @@ export default function Navbar({
         >
           {enginePaused ? "▶ Modeli Başlat" : "⏸ Modeli Durdur"}
         </button>
-        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onGenerateReport} disabled={reportBusy}>
-          {reportBusy ? "Oluşturuluyor…" : "Rapor Oluştur"}
+        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onOpenAdmin} title="Kamera yönetimi">
+          ⚙ Kameralar
         </button>
       </div>
     </header>

@@ -7,27 +7,6 @@ export async function fetchStats() {
   return res.json();
 }
 
-// Kamera id->ad eşlemesi backend'de yok (detector'ın cameras.json'ında) — bu
-// yüzden istemci elindeki listeyi gönderir, backend raporu bu adlarla üretir.
-export async function downloadReportPdf(cameraNames) {
-  const res = await fetch("/api/v1/stats/report.pdf", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cameraNames }),
-  });
-  if (!res.ok) throw new Error(String(res.status));
-  const blob = await res.blob();
-  const disposition = res.headers.get("Content-Disposition") || "";
-  const filename = disposition.match(/filename="?([^"]+)"?/)?.[1] || "rapor.pdf";
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 export function violationsListUrl({ page, size, from, to, cameraId, status }) {
   const params = new URLSearchParams();

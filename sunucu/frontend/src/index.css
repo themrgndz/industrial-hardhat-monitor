@@ -2,11 +2,11 @@
    yazmak yerine Bootstrap'in öngördüğü resmi özelleştirme yöntemi budur.
    data-bs-theme="dark" index.html'de <html> üzerinde ayarlı. */
 [data-bs-theme="dark"] {
-  --bs-body-bg: #0a0d12;
+  --bs-body-bg: #0c0c0d;
   --bs-body-color: #eceef2;
-  --bs-secondary-bg: #12161d;
-  --bs-tertiary-bg: #1b212b;
-  --bs-border-color: #262c37;
+  --bs-secondary-bg: #161616;
+  --bs-tertiary-bg: #202020;
+  --bs-border-color: #2c2c2c;
   --bs-emphasis-color: #ffffff;
 
   --bs-primary: #4c8dff;

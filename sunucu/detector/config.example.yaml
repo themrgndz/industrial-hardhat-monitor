@@ -1,7 +1,11 @@
 # Kamera listesi ayrı bir JSON dosyasında tutulur; parolalar bu dosyaya gömülür
-# ve cameras.json .gitignore'dadır. Örnek içerik (cameras.json):
+# ve cameras.json .gitignore'dadır. `uri` rtsp(s)://, http(s):// olabileceği
+# gibi yerel bir video dosyası yolu da olabilir (test için ideal: dosya EOF'a
+# gelince otomatik başa sarılıp döngüde oynatılır, ekstra RTSP publish/decode
+# sürecine gerek kalmaz — bkz. app/stream.py StreamReader). Örnek içerik
+# (cameras.json):
 #   [
-#     {"id":"cam-1","name":"Kamera 1","uri":"rtsp://127.0.0.1:8554/cam-1","preview_uri":""},
+#     {"id":"cam-1","name":"Kamera 1","uri":"C:/videos/kamera1.mp4","preview_uri":""},
 #     {"id":"cam-2","name":"Kamera 2","uri":"rtsp://127.0.0.1:8554/cam-2","preview_uri":""},
 #     {"id":"cam-3","name":"Kamera 3","uri":"rtsp://127.0.0.1:8554/cam-3","preview_uri":""},
 #     {
