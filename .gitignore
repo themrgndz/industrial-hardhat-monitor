@@ -6,9 +6,7 @@ sunucu/pgsql/
 sunucu/pgdata/
 sunucu/backend/target/
 sunucu/backend/storage/
-yayin/mediamtx/
-yayin/videos/*.mp4
-yayin/state/
+yayin/
 CanlıKamera.xspf
 Metrikler/
 Kurulum.pdf

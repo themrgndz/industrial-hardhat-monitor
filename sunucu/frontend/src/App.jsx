@@ -4,9 +4,8 @@ import { useCameraHub } from "./hooks/useCameraHub.js";
 import { useMetrics } from "./hooks/useMetrics.js";
 import { useLiveViolations } from "./hooks/useLiveViolations.js";
 import { useViolationLog } from "./hooks/useViolationLog.js";
-import { downloadReportPdf, fetchStats } from "./api/backend.js";
+import { fetchStats } from "./api/backend.js";
 import Navbar from "./components/Navbar.jsx";
-import CameraPanel from "./components/CameraPanel.jsx";
 import Stage from "./components/Stage.jsx";
 import ViolationsPanel from "./components/ViolationsPanel.jsx";
 import ViolationLog from "./components/ViolationLog.jsx";
@@ -20,13 +19,11 @@ export default function App() {
   const metrics = useMetrics();
   const log = useViolationLog();
   const [stats, setStats] = useState({});
-  const [camerasOpen, setCamerasOpen] = useState(false);
   const [violationsOpen, setViolationsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [evidenceQueue, setEvidenceQueue] = useState(null); // { items: [...], index } | null
   const [adminOpen, setAdminOpen] = useState(false);
   const [metricsView, setMetricsView] = useState(false);
-  const [reportBusy, setReportBusy] = useState(false);
   const [engineBusy, setEngineBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
 
@@ -119,18 +116,6 @@ export default function App() {
     }
   }
 
-  async function handleGenerateReport() {
-    setReportBusy(true);
-    try {
-      const cameraNames = Object.fromEntries(hub.cameras.map((c) => [c.id, c.name]));
-      await downloadReportPdf(cameraNames);
-    } catch (err) {
-      alert(`Rapor oluşturulamadı: ${err.message}`);
-    } finally {
-      setReportBusy(false);
-    }
-  }
-
   return (
     <div className={`app ${focusMode ? "focus-mode" : ""}`}>
       <div className="app-viewport">
@@ -138,33 +123,21 @@ export default function App() {
           <Navbar
             metrics={metrics.metrics}
             metricsOk={metrics.ok}
-            camerasOpen={camerasOpen}
             violationsOpen={violationsOpen}
             metricsViewOpen={metricsView}
             minConfidence={hub.minConfidence}
             confidenceFloor={hub.confidenceFloor}
             onSensitivityChange={hub.setSensitivity}
-            onToggleCameras={() => setCamerasOpen((v) => !v)}
             onToggleViolations={() => setViolationsOpen((v) => !v)}
             onToggleMetricsView={() => setMetricsView((v) => !v)}
-            onGenerateReport={handleGenerateReport}
-            reportBusy={reportBusy}
+            onOpenAdmin={() => setAdminOpen(true)}
             onToggleEngine={handleToggleEngine}
             engineBusy={engineBusy}
             onBrandClick={handleClose}
           />
         )}
 
-        <main className={`layout ${camerasOpen ? "cam-open" : ""} ${violationsOpen ? "vio-open" : ""}`}>
-          {!focusMode && (
-            <CameraPanel
-              open={camerasOpen}
-              cameras={hub.cameras}
-              onSelect={handleSelect}
-              onOpenAdmin={() => setAdminOpen(true)}
-            />
-          )}
-
+        <main className={`layout ${violationsOpen ? "vio-open" : ""}`}>
           <Stage
             cameras={hub.cameras}
             active={hub.active}

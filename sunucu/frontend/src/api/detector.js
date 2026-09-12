@@ -97,8 +97,9 @@ export function snapshotUrl(id, width) {
   return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?w=${width}&t=${Date.now()}`;
 }
 
-export function liveUrl(id, labelsOn = true) {
-  return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/live.mjpg?labels=${labelsOn ? 1 : 0}`;
+export function liveUrl(id, labelsOn = true, width) {
+  const w = width ? `&w=${width}` : "";
+  return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/live.mjpg?labels=${labelsOn ? 1 : 0}${w}`;
 }
 
 export async function fetchSettings() {
