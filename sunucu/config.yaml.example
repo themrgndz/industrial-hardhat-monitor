@@ -61,6 +61,11 @@ tracking:
                                           # ölçülür.
   confirm_frames: 1                      # ilk analizde hemen ihlal panele düşsün; onay/red insan kararı
   cooldown_seconds: 60                   # aynı track için tekrar tekrar loglamayı önler
+  match_distance_ratio: 1.5              # IoU tutmazsa (capture.fps çok düşükken, örn. 0.25 = 4sn'de bir
+                                          # kare, hareketli nesne kutuları örtüşmeyi kaybedebilir) merkez
+                                          # mesafesi kutu köşegen ortalamasına oranla ikincil eşleşme
+                                          # adayı sayılır; böylece aynı kişi/nesne hareket ettiğinde yeni
+                                          # track_id ile ihlal TEKRAR raporlanmaz. 0 = devre dışı.
 
 logging:
   dir: "logs/ihlal"                      # içeride {gün.ay.yıl}/{kamera}/ alt klasörlenir

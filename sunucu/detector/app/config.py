@@ -18,7 +18,7 @@ _SECTION_KEYS: dict[str, set[str]] = {
         "slice_height", "slice_width", "overlap_ratio", "postprocess_match_threshold",
         "upscale_factor", "enabled", "full_frame_pass",
     },
-    "tracking": {"iou_threshold", "max_age_seconds", "confirm_frames", "cooldown_seconds"},
+    "tracking": {"iou_threshold", "max_age_seconds", "confirm_frames", "cooldown_seconds", "match_distance_ratio"},
     "logging": {"dir", "jsonl_name", "crop_padding_ratio", "jpeg_quality"},
     "backend": {"enabled", "url", "api_key", "timeout_seconds", "retry_interval_seconds"},
 }
@@ -108,6 +108,12 @@ class TrackingConfig:
     max_age_seconds: float
     confirm_frames: int
     cooldown_seconds: float
+    # IoU eşiği tutmazsa (yavaş kare-işleme aralığında hareketli nesne kutuları
+    # örtüşmeyi kaybedebilir) merkez mesafesi köşegen ortalamasına oranla
+    # ikincil eşleşme adayı sayılır; bkz. tracker.py `_match_score`.
+    # 0 = devre dışı (yalnız IoU). Eski config.yaml dosyalarıyla uyum için
+    # varsayılan verilir.
+    match_distance_ratio: float = 1.5
 
 
 @dataclass(frozen=True, slots=True)

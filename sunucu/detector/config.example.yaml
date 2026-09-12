@@ -62,6 +62,7 @@ tracking:
   max_age_seconds: 10.0                  # kare işleme aralığından bağımsız, gerçek süre (saniye)
   confirm_frames: 1                      # ilk tespitte hemen ihlal panele düşsün; onay/red insan kararı
   cooldown_seconds: 60
+  match_distance_ratio: 1.5              # IoU tutmazsa merkez mesafesiyle ikincil eşleşme (bkz. tracker.py)
 
 logging:
   dir: "logs/ihlal"                      # {gün.ay.yıl}/{kamera}/ alt klasörlenir

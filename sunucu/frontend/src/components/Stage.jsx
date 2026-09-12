@@ -187,23 +187,27 @@ export default function Stage({
 }) {
   const liveRef = useRef(null);
   const [labelsOn, setLabelsOn] = useState(true);
+  const [trailsOn, setTrailsOn] = useState(false); // GEÇİCİ: yalnız test/görselleştirme (bkz. tracker.py)
 
   useEffect(() => {
     const img = liveRef.current;
     if (!img || !active) return;
-    const key = `${active.id}:${labelsOn ? "1" : "0"}`;
+    const key = `${active.id}:${labelsOn ? "1" : "0"}:${trailsOn ? "1" : "0"}`;
     if (img.dataset.liveKey !== key) {
       img.removeAttribute("src"); // eski kameranın/moddaki MJPEG bağlantısı kapanmalı
       img.dataset.liveKey = key;
-      img.src = liveUrl(active.id, labelsOn);
+      img.src = liveUrl(active.id, labelsOn, trailsOn);
     }
-  }, [active, labelsOn]);
+  }, [active, labelsOn, trailsOn]);
 
   if (metricsView) {
     return (
       <section className="card stage" style={{ alignItems: "stretch", justifyContent: "flex-start", overflowY: "auto" }}>
         <h2 className="h5 mb-3">Sistem Kullanımı</h2>
-        <MetricsPanel metrics={metrics} ok={metricsOk} gpuHistory={gpuHistory} onSetBatchSize={onSetBatchSize} batchBusy={batchBusy} />
+        <MetricsPanel
+          metrics={metrics} ok={metricsOk} gpuHistory={gpuHistory} onSetBatchSize={onSetBatchSize} batchBusy={batchBusy}
+          trailsOn={trailsOn} onToggleTrails={() => setTrailsOn((v) => !v)}
+        />
       </section>
     );
   }
