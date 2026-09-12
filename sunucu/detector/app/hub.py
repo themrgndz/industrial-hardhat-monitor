@@ -15,7 +15,7 @@ from .display_settings import DisplaySettingsStore
 from .events import EventBus
 from .inference import Detection
 from .stream import StreamReader
-from .tracker import IoUTracker
+from .tracker import IoUTracker, Track
 from .violations import ViolationLogger
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,10 @@ class CameraState:
     violations_since_start: int = 0
     frames_processed: int = 0
     inference_ms_total: float = 0.0
+    # GEÇİCİ (yalnız test/görselleştirme): track_id -> son merkez noktaları.
+    # tracker.py'nin rotayı doğru takip ettiğini canlı görüntüde doğrulamak
+    # için eklendi; kalıcı bir özellik değil, kaldırılması güvenli.
+    trails: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
 
 
 class CameraHub:
@@ -277,6 +281,34 @@ class CameraHub:
             st = self._states.get(camera_id)
             if st is not None:
                 st.violations_since_start += 1
+
+    # GEÇİCİ (yalnız test/görselleştirme, bkz. CameraState.trails).
+    _TRAIL_MAX_POINTS = 40
+
+    def update_trails(self, camera_id: str, tracks: list[Track]) -> None:
+        with self._lock:
+            st = self._states.get(camera_id)
+            if st is None:
+                return
+            alive_ids = set()
+            for t in tracks:
+                alive_ids.add(t.track_id)
+                x, y, w, h = t.bbox
+                center = (int(x + w / 2), int(y + h / 2))
+                pts = st.trails.setdefault(t.track_id, [])
+                pts.append(center)
+                if len(pts) > self._TRAIL_MAX_POINTS:
+                    del pts[: len(pts) - self._TRAIL_MAX_POINTS]
+            for tid in list(st.trails.keys()):
+                if tid not in alive_ids:
+                    del st.trails[tid]
+
+    def trails(self, camera_id: str) -> dict[str, list[tuple[int, int]]]:
+        with self._lock:
+            st = self._states.get(camera_id)
+            if st is None:
+                return {}
+            return {tid: list(pts) for tid, pts in st.trails.items()}
 
     # ---- API gövdeleri ---------------------------------------------------
 

@@ -54,6 +54,8 @@ tracking:
   max_age_seconds: 10.0
   confirm_frames: 1
   cooldown_seconds: 60
+  match_distance_ratio: 1.5              # bkz. sunucu/config.yaml.example — IoU tutmazsa hareketli
+                                          # nesneyi (yavaş capture.fps'de) merkez mesafesiyle eşleştirir
 
 logging:
   dir: "logs/ihlal"

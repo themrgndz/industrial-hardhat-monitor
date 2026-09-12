@@ -130,9 +130,25 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
 .live-nav-prev { left: 10px; }
 .live-nav-next { right: 10px; }
 
-/* ---- kanıt modalı: tespit kutusu overlay'i (Bootstrap'ta karşılığı yok) ---- */
-.evidence-frame { position: relative; line-height: 0; }
-.evidence-frame img { max-width: 100%; max-height: 55vh; display: block; }
+/* ---- kanıt modalı: yaklaşık tam ekran çerçeve + tekerlekle yakınlaştırma/
+   sürükleyerek gezinme (bkz. EvidenceModal.jsx) ---- */
+.evidence-frame {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none; /* wheel/pointer olaylarını tarayıcı kaydırması yerine biz yönetiriz */
+}
+.evidence-frame:active { cursor: grabbing; }
+.evidence-zoom-content {
+  position: relative;
+  line-height: 0;
+  transform-origin: center center;
+  transition: transform 0.05s linear;
+}
+.evidence-zoom-content img { max-width: 90vw; max-height: 78vh; display: block; }
 .evidence-box { position: absolute; border: 2px solid var(--bs-danger); pointer-events: none; }
 
 /* ---- kamera yönetimi: URI hücresini kısalt ---- */

@@ -63,7 +63,7 @@ function BatchSizeControl({ value, max, busy, onCommit }) {
 
 // Navbar'daki eski dropdown yerine artık Stage'in "Sistem Kullanımı" görünümü
 // içinde tam genişlikte, her zaman açık gösteriliyor (bkz. Stage.jsx).
-export default function MetricsPanel({ metrics, ok, gpuHistory, onSetBatchSize, batchBusy }) {
+export default function MetricsPanel({ metrics, ok, gpuHistory, onSetBatchSize, batchBusy, trailsOn, onToggleTrails }) {
   if (!ok) return <p className="text-secondary small mb-0">detector'a bağlanılamıyor.</p>;
   if (!metrics) return null;
 
@@ -130,6 +130,19 @@ export default function MetricsPanel({ metrics, ok, gpuHistory, onSetBatchSize, 
           </section>
         </div>
       </div>
+
+      <section className="card card-body mt-3">
+        <h3 className="text-uppercase text-secondary small fw-semibold mb-2">Tracker Görselleştirme</h3>
+        <div className="form-check form-switch mb-0">
+          <input
+            className="form-check-input" type="checkbox" role="switch" id="trailsToggle"
+            checked={!!trailsOn} onChange={onToggleTrails}
+          />
+          <label className="form-check-label small" htmlFor="trailsToggle">
+            Canlı görüntüde takip izini (rota) göster
+          </label>
+        </div>
+      </section>
 
       <section className="card card-body mt-3">
         <h3 className="text-uppercase text-secondary small fw-semibold mb-2">Kameralar</h3>

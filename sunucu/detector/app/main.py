@@ -209,6 +209,7 @@ class Application:
 
         now_monotonic = time.monotonic()
         tracks = state.tracker.update(detections, now_monotonic)
+        self._hub.update_trails(camera_id, tracks)  # GEÇİCİ: yalnız test/görselleştirme
         for t in tracks:
             if not self._is_violation(t, now_monotonic):
                 continue

@@ -384,6 +384,7 @@ class _Handler(BaseHTTPRequestHandler):
         interval = 1.0 / self._cfg.server.live_fps
         violation_label = self._cfg.model.violation_class
         labels_on = query.get("labels", ["1"])[0] != "0"
+        trails_on = query.get("trails", ["0"])[0] != "0"  # GEÇİCİ: takip izi görselleştirme aç/kapa
 
         self._send_stream_headers(f"multipart/x-mixed-replace; boundary={_BOUNDARY.decode()}")
         last_frame_at = time.monotonic()
@@ -405,9 +406,11 @@ class _Handler(BaseHTTPRequestHandler):
                 if labels_on:
                     min_conf = self._hub.min_confidence
                     detections = [d for d in detections if d.confidence >= min_conf]
+                    trails = self._hub.trails(camera_id) if trails_on else None  # GEÇİCİ
                 else:
                     detections = []
-                canvas = render.draw(frame, detections, violation_label, width)
+                    trails = None
+                canvas = render.draw(frame, detections, violation_label, width, trails)
                 jpg = _encode(canvas, quality)
                 if jpg is None:
                     time.sleep(interval)
