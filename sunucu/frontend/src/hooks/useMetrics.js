@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchMetrics, pauseEngine, resumeEngine, updateBatchSize } from "../api/detector.js";
+import { fetchMetrics, pauseEngine, resumeEngine, selectModel, updateBatchSize } from "../api/detector.js";
 
 const METRICS_POLL_MS = 3000;
 // 3 saniyelik aralıkla 120 örnek = son 6 dakikalık GPU geçmişi.
@@ -43,5 +43,10 @@ export function useMetrics() {
     await refresh();
   }, [refresh]);
 
-  return { metrics, ok, gpuHistory, refresh, toggleEngine, setBatchSize };
+  const changeModel = useCallback(async (file) => {
+    await selectModel(file);
+    await refresh();
+  }, [refresh]);
+
+  return { metrics, ok, gpuHistory, refresh, toggleEngine, setBatchSize, changeModel };
 }

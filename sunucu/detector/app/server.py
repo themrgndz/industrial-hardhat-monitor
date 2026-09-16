@@ -19,6 +19,7 @@ from .engine_control import EngineControl
 from .events import EventBus
 from .hub import CameraHub
 from .metrics import GpuMonitor, SchedulerStats
+from .model_control import ModelControl
 from .stream import tcp_reachable
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class _Server(ThreadingHTTPServer):
     def __init__(
         self, address, handler, cfg: Config, hub: CameraHub, bus: EventBus,
         scheduler_stats: SchedulerStats, gpu_monitor: GpuMonitor, engine_control: EngineControl,
-        capture_control: CaptureControl,
+        capture_control: CaptureControl, model_control: ModelControl,
     ) -> None:
         super().__init__(address, handler)
         self.cfg = cfg
@@ -50,6 +51,7 @@ class _Server(ThreadingHTTPServer):
         self.gpu_monitor = gpu_monitor
         self.engine_control = engine_control
         self.capture_control = capture_control
+        self.model_control = model_control
 
     def handle_error(self, request, client_address) -> None:
         """MJPEG/SSE istemcisi sekmeyi kapattığında socketserver tam traceback
@@ -94,6 +96,10 @@ class _Handler(BaseHTTPRequestHandler):
     @property
     def _capture_control(self) -> CaptureControl:
         return self.server.capture_control  # type: ignore[attr-defined]
+
+    @property
+    def _model_control(self) -> ModelControl:
+        return self.server.model_control  # type: ignore[attr-defined]
 
     def log_message(self, fmt: str, *args) -> None:
         logger.debug("http %s - %s", self.address_string(), fmt % args)
@@ -155,6 +161,7 @@ class _Handler(BaseHTTPRequestHandler):
             "scheduling": sched,
             "capture": self._capture_control.snapshot(),
             "cameras": cameras,
+            "models": self._model_control.snapshot(),
         }
 
     def _width_param(self, query: dict[str, list[str]], default: int) -> int:
@@ -204,6 +211,9 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/capture":
             self._send_json(self._capture_control.snapshot())
             return
+        if path == "/api/models":
+            self._send_json(self._model_control.snapshot())
+            return
         if path == "/api/events":
             self._handle_events()
             return
@@ -245,6 +255,36 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/engine/resume":
             self._engine_control.resume()
             self._send_json(self._engine_control.snapshot())
+            return
+        if path == "/api/models/select":
+            filename = body.get("file")
+            if not isinstance(filename, str) or not filename.strip():
+                self._send_json({"error": "file gerekli"}, 400)
+                return
+            # Yükleme birkaç saniye sürebilir; iki modelin aynı anda GPU'da
+            # olmasını (VRAM) ve döngünün eski modelle çalışmaya devam
+            # etmesini önlemek için çıkarım döngüsü geçici olarak durdurulur.
+            was_paused = self._engine_control.paused
+            if not was_paused:
+                self._engine_control.pause()
+            try:
+                self._model_control.select(filename)
+            except ValueError as exc:
+                if not was_paused:
+                    self._engine_control.resume()
+                self._send_json({"error": str(exc)}, 400)
+                return
+            except Exception:  # noqa: BLE001
+                logger.exception("model ağırlığı değiştirilemedi: %s", filename)
+                if not was_paused:
+                    self._engine_control.resume()
+                self._send_json({"error": "model yüklenemedi"}, 500)
+                return
+            if not was_paused:
+                self._engine_control.resume()
+            snapshot = self._model_control.snapshot()
+            self._bus.publish("models", snapshot)
+            self._send_json(snapshot)
             return
         if path == "/api/settings":
             raw = body.get("minConfidence")
@@ -525,7 +565,7 @@ class DetectorServer:
     def __init__(
         self, cfg: Config, hub: CameraHub, bus: EventBus,
         scheduler_stats: SchedulerStats, gpu_monitor: GpuMonitor, engine_control: EngineControl,
-        capture_control: CaptureControl,
+        capture_control: CaptureControl, model_control: ModelControl,
     ) -> None:
         self._cfg = cfg
         self._hub = hub
@@ -534,6 +574,7 @@ class DetectorServer:
         self._gpu_monitor = gpu_monitor
         self._engine_control = engine_control
         self._capture_control = capture_control
+        self._model_control = model_control
         self._httpd: _Server | None = None
         self._thread: threading.Thread | None = None
 
@@ -542,6 +583,7 @@ class DetectorServer:
         self._httpd = _Server(
             address, _Handler, self._cfg, self._hub, self._bus,
             self._scheduler_stats, self._gpu_monitor, self._engine_control, self._capture_control,
+            self._model_control,
         )
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()

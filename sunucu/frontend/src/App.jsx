@@ -26,6 +26,7 @@ export default function App() {
   const [metricsView, setMetricsView] = useState(false);
   const [engineBusy, setEngineBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
+  const [modelBusy, setModelBusy] = useState(false);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -98,6 +99,15 @@ export default function App() {
     }
   }
 
+  async function handleChangeModel(file) {
+    setModelBusy(true);
+    try {
+      await metrics.changeModel(file);
+    } finally {
+      setModelBusy(false);
+    }
+  }
+
   function review(id, status) {
     live.review(id, status);
     log.refresh();
@@ -153,6 +163,8 @@ export default function App() {
             gpuHistory={metrics.gpuHistory}
             onSetBatchSize={handleSetBatchSize}
             batchBusy={batchBusy}
+            onChangeModel={handleChangeModel}
+            modelBusy={modelBusy}
           />
 
           {!focusMode && (

@@ -183,7 +183,7 @@ function LiveCounts({ analysis, activeId, minConfidence }) {
 
 export default function Stage({
   cameras, active, analysis, analysisByCamera, minConfidence, onSelect, onClose, onFullscreen,
-  metricsView, metrics, metricsOk, gpuHistory, onSetBatchSize, batchBusy,
+  metricsView, metrics, metricsOk, gpuHistory, onSetBatchSize, batchBusy, onChangeModel, modelBusy,
 }) {
   const liveRef = useRef(null);
   const [labelsOn, setLabelsOn] = useState(true);
@@ -206,6 +206,7 @@ export default function Stage({
         <h2 className="h5 mb-3">Sistem Kullanımı</h2>
         <MetricsPanel
           metrics={metrics} ok={metricsOk} gpuHistory={gpuHistory} onSetBatchSize={onSetBatchSize} batchBusy={batchBusy}
+          onChangeModel={onChangeModel} modelBusy={modelBusy}
           trailsOn={trailsOn} onToggleTrails={() => setTrailsOn((v) => !v)}
         />
       </section>

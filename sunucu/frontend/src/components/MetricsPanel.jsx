@@ -61,9 +61,61 @@ function BatchSizeControl({ value, max, busy, onCommit }) {
   );
 }
 
+// Grup boyutu kontrolündeki desenle aynı: seçim hemen uygulanmaz, kullanıcı
+// "Uygula"ya basınca istek atılır (yanlışlıkla model değişip birkaç
+// saniyeliğine çıkarımın durmasını önlemek için).
+function ModelSelectControl({ files, current, busy, onApply }) {
+  const [selected, setSelected] = useState(current || "");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSelected((prev) => (files.some((f) => f.name === prev) ? prev : current || ""));
+  }, [files, current]);
+
+  const dirty = selected && selected !== current;
+
+  async function apply() {
+    if (!dirty) return;
+    setError("");
+    try {
+      await onApply(selected);
+    } catch (err) {
+      setError(err.message || "model değiştirilemedi");
+    }
+  }
+
+  return (
+    <div className="d-flex flex-column gap-1">
+      <div className="d-flex flex-wrap align-items-center gap-2">
+        <select
+          className="form-select form-select-sm" style={{ width: "auto", minWidth: 220 }}
+          value={selected} disabled={busy || files.length === 0}
+          onChange={(e) => setSelected(e.target.value)}
+        >
+          {files.length === 0 && <option value="">ağırlık bulunamadı</option>}
+          {files.map((f) => (
+            <option key={f.name} value={f.name}>
+              {f.name}{f.sizeMb != null ? ` (${f.sizeMb} MB)` : ""}{f.name === current ? " — aktif" : ""}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button" className="btn btn-sm btn-outline-secondary" onClick={apply}
+          disabled={busy || !dirty} title="Modeli durdurup seçilen ağırlıkla yeniden başlatır"
+        >
+          {busy ? "Uygulanıyor…" : "Uygula"}
+        </button>
+      </div>
+      {error && <span className="text-danger small">{error}</span>}
+    </div>
+  );
+}
+
 // Navbar'daki eski dropdown yerine artık Stage'in "Sistem Kullanımı" görünümü
 // içinde tam genişlikte, her zaman açık gösteriliyor (bkz. Stage.jsx).
-export default function MetricsPanel({ metrics, ok, gpuHistory, onSetBatchSize, batchBusy, trailsOn, onToggleTrails }) {
+export default function MetricsPanel({
+  metrics, ok, gpuHistory, onSetBatchSize, batchBusy, onChangeModel, modelBusy, trailsOn, onToggleTrails,
+}) {
   if (!ok) return <p className="text-secondary small mb-0">detector'a bağlanılamıyor.</p>;
   if (!metrics) return null;
 
@@ -130,6 +182,19 @@ export default function MetricsPanel({ metrics, ok, gpuHistory, onSetBatchSize, 
           </section>
         </div>
       </div>
+
+      <section className="card card-body mt-3">
+        <h3 className="text-uppercase text-secondary small fw-semibold mb-2">Model</h3>
+        <ModelSelectControl
+          files={metrics.models?.files ?? []}
+          current={metrics.models?.current ?? null}
+          busy={!!modelBusy}
+          onApply={onChangeModel}
+        />
+        <p className="text-secondary small mb-0 mt-2">
+          Uygula'ya basınca model geçici olarak durur, seçilen ağırlık yüklenir ve tüm kameralarda kaldığı yerden devam eder.
+        </p>
+      </section>
 
       <section className="card card-body mt-3">
         <h3 className="text-uppercase text-secondary small fw-semibold mb-2">Tracker Görselleştirme</h3>

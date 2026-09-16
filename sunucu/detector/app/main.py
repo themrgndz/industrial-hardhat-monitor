@@ -21,8 +21,9 @@ from .config import Config
 from .engine_control import EngineControl
 from .events import EventBus
 from .hub import CameraHub, CameraState
-from .inference import Detection, InferenceEngine
+from .inference import Detection
 from .metrics import GpuMonitor, SchedulerStats
+from .model_control import ModelControl
 from .server import DetectorServer
 from .tracker import Track
 from .violations import ViolationRecord, ViolationWorker
@@ -38,7 +39,10 @@ class Application:
     def __init__(self, cfg: Config) -> None:
         self._cfg = cfg
         self._bus = EventBus()
-        self._engine = InferenceEngine(cfg.model, cfg.sahi)
+        self._model_control = ModelControl(
+            cfg.model, cfg.sahi,
+            Path(cfg.cameras_file).resolve().parent / "model_settings.json",
+        )
         self._backend: BackendClient | None = None
         self._retry_worker: RetryWorker | None = None
         if cfg.backend.enabled:
@@ -55,7 +59,7 @@ class Application:
         )
         self._server = DetectorServer(
             cfg, self._hub, self._bus, self._scheduler_stats, self._gpu_monitor,
-            self._engine_control, self._capture_control,
+            self._engine_control, self._capture_control, self._model_control,
         )
 
         self._stop = False
@@ -146,7 +150,7 @@ class Application:
 
                 try:
                     batch_start = time.monotonic()
-                    batch_detections = self._engine.predict_batch([frame for _, frame, _ in ready])
+                    batch_detections = self._model_control.engine.predict_batch([frame for _, frame, _ in ready])
                     per_camera_ms = (time.monotonic() - batch_start) * 1000 / len(ready)
                     for (state, frame, seq), detections in zip(ready, batch_detections):
                         try:
