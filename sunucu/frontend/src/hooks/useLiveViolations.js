@@ -93,7 +93,15 @@ export function useLiveViolations({ onChanged } = {}) {
     }
   }, [onChanged]);
 
+  // Backend'e hiç yazılamamış satırlar (bkz. "backendId yok") review isteğiyle
+  // silinemez — orada silinecek bir backend kaydı yok. Bunlar sadece yerel
+  // kuyruktan (localStorage) kaldırılır, aksi halde günün sonuna kadar
+  // "kuyrukta" görünüp ekranda birikirler.
+  const dismiss = useCallback((key) => {
+    setRows((prev) => prev.filter((r) => r._key !== key));
+  }, []);
+
   const clear = useCallback(() => setRows([]), []);
 
-  return { rows, review, clear };
+  return { rows, review, dismiss, clear };
 }

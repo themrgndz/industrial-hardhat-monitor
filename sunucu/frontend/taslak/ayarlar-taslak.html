@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ayarlar — Taslak</title>
+<link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css" />
+<style>
+  :root {
+    --bs-body-bg: #0c0c0d;
+    --bs-body-color: #eceef2;
+    --bs-secondary-bg: #161616;
+    --bs-tertiary-bg: #202020;
+    --bs-border-color: #2c2c2c;
+    --bs-emphasis-color: #ffffff;
+    --bs-primary: #4c8dff;
+    --bs-primary-rgb: 76, 141, 255;
+  }
+  html, body { height: 100%; margin: 0; }
+  body { background: radial-gradient(circle at 20% 15%, #163d73 0%, #0c0c0d 45%), var(--bs-body-bg); color: var(--bs-body-color); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+
+  /* Sahte üstteki şeffaf marka çubuğu — gerçek app'te BrandNavbar bileşeni */
+  .brand-navbar {
+    position: fixed; inset: 0 0 auto 0; z-index: 30;
+    display: flex; align-items: center; height: 64px; padding: 0 28px;
+    background: linear-gradient(180deg, rgba(5,5,6,.4) 0%, rgba(5,5,6,0) 100%);
+  }
+  .brand-navbar span { color: #fff; font-weight: 700; font-size: 15px; letter-spacing: .12em; opacity: .85; }
+
+  /* Tam sayfayı kaplayan, kenarlarda ince boşluklu konteyner */
+  .ayarlar-shell {
+    position: fixed;
+    top: 84px; left: 24px; right: 24px; bottom: 24px;
+    background: rgba(12, 12, 13, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ayarlar-shell .nav-tabs {
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 8px 16px 0;
+    flex: 0 0 auto;
+  }
+  .ayarlar-shell .nav-tabs .nav-link {
+    color: #9aa0ab;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .ayarlar-shell .nav-tabs .nav-link:hover {
+    color: #d7dae0;
+    border-bottom-color: rgba(255,255,255,.15);
+  }
+  .ayarlar-shell .nav-tabs .nav-link.active {
+    color: #fff;
+    background: transparent;
+    border-bottom-color: var(--bs-primary);
+  }
+  .ayarlar-shell .tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 24px;
+    color: #5c616d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+  <header class="brand-navbar"><span>UZMAR</span></header>
+
+  <div class="ayarlar-shell">
+    <ul class="nav nav-tabs">
+      <li class="nav-item"><button class="nav-link active" type="button">Kamera Ayarları</button></li>
+      <li class="nav-item"><button class="nav-link" type="button">Gpu Takip</button></li>
+      <li class="nav-item"><button class="nav-link" type="button">Model Ayarları</button></li>
+    </ul>
+    <div class="tab-content">İçerik burada olacak — devamı geliyor.</div>
+  </div>
+</body>
+</html>
