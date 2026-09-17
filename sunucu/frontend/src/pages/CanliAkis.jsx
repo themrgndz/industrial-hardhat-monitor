@@ -2,6 +2,7 @@ import { useState } from "react";
 import BrandNavbar from "../components/BrandNavbar.jsx";
 import Particles from "../components/Particles.jsx";
 import Stage from "../components/Stage.jsx";
+import { useLiveViolations } from "../hooks/useLiveViolations.js";
 import { useCameraHub } from "../hooks/useCameraHub.js";
 import "../App.css"; // .stage/.camera-grid/.tile/.live-frame/.live-nav — eski Stage'in kendi stilleri, değiştirilmedi
 import "./CanliAkis.css";
@@ -24,6 +25,14 @@ export default function CanliAkis() {
   const hub = useCameraHub();
   const [focusMode, setFocusMode] = useState(false);
   const [viewingId, setViewingId] = useState(null);
+  const [bubble, setBubble] = useState(false);
+
+  useLiveViolations({
+    onChanged: () => {
+      setBubble(true);
+      setTimeout(() => setBubble(false), 3000);
+    }
+  });
 
   function handleSelect(id) {
     setViewingId(id);
@@ -72,6 +81,29 @@ export default function CanliAkis() {
           onFullscreen={() => setFocusMode((v) => !v)}
         />
       </div>
+
+      {/* İhlal Bildirim Baloncuğu */}
+      {bubble && (
+        <div style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          backgroundColor: "#dc3545",
+          color: "white",
+          padding: "12px 20px",
+          borderRadius: "8px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          zIndex: 9999,
+          animation: "popIn 0.3s ease-out forwards",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          fontWeight: "500"
+        }}>
+          <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+          Yeni İhlal Tespit Edildi!
+        </div>
+      )}
     </div>
   );
 }

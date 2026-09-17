@@ -57,3 +57,8 @@
 .canli-akis--focus .camera-grid {
   height: 100vh;
 }
+
+@keyframes popIn {
+  0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
