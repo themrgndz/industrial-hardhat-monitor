@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BrandNavbar from "../components/BrandNavbar.jsx";
+import Particles from "../components/Particles.jsx";
 import { useCameraHub } from "../hooks/useCameraHub.js";
 import { useMetrics } from "../hooks/useMetrics.js";
 import KameraAyarlariTab from "./ayarlar/KameraAyarlariTab.jsx";
@@ -21,6 +22,21 @@ export default function Ayarlar() {
 
   return (
     <div className="ayarlar">
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <Particles
+          particleColors={["#ffffff"]}
+          particleCount={580}
+          particleSpread={4}
+          speed={0.035}
+          particleBaseSize={100}
+          sizeRandomness={0.25}
+          cameraDistance={12}
+          moveParticlesOnHover={false}
+          particleHoverFactor={0}
+          alphaParticles
+          disableRotation={false}
+        />
+      </div>
       <BrandNavbar />
 
       <div className="ayarlar__shell glass-panel">

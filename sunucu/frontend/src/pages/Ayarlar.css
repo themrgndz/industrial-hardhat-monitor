@@ -7,6 +7,13 @@
   background: radial-gradient(circle at 20% 15%, #163d73 0%, #0c0c0d 45%);
 }
 
+/* TEST — particle arkaplanının cam panelin içinden sızması için geçici
+   opaklık düşürme; deneme sonrası ya kalıcı yapılacak ya da 0.72'ye geri
+   alınacak (bkz. Ayarlar.jsx Particles entegrasyonu). */
+.ayarlar__shell.glass-panel {
+  background: rgba(12, 12, 13, 0.25);
+}
+
 /* Bootstrap'ın .card, .form-control ve .table'ı kendi opak arkaplanını taşır
    (--bs-body-bg / --bs-table-bg) — .glass-panel kabuğun (.ayarlar__shell)
    şeffaflığını bunların İÇİNDE de görebilmek için burada saydamlaştırılıyor,

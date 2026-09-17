@@ -71,6 +71,8 @@ export function useLiveViolations({ onChanged } = {}) {
         }, 1200);
       },
     });
+
+
     sourceRef.current = source;
     return () => source.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,8 +81,6 @@ export function useLiveViolations({ onChanged } = {}) {
   const review = useCallback(async (backendId, status) => {
     if (!backendId) return;
     try {
-      // "İhlal değil" artık soft REJECTED değil, kalıcı silme — kullanıcı kararı:
-      // reddedilen tespitler geçmişte/eğitim verisinde kalmasın.
       if (status === "REJECTED") {
         await deleteViolation(backendId);
       } else {

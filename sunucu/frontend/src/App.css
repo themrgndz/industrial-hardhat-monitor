@@ -93,7 +93,11 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
 }
 
 .tile { position: relative; overflow: hidden; background: #000; cursor: pointer; padding: 0; border: 0; border-radius: var(--bs-border-radius); }
+.tile.is-empty { background: rgba(255, 255, 255, 0.03); }
 .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile img.is-hidden { visibility: hidden; }
+.tile-fallback { gap: 4px; font-size: 11px; padding: 4px; text-align: center; }
+.tile-fallback .live-fallback-icon { font-size: 18px; }
 .tile .tile-label {
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; gap: 6px;
@@ -113,8 +117,39 @@ dialog.modal-content::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter
   100% { opacity: 0; }
 }
 
-.live-frame { background: #000; display: flex; justify-content: center; width: 100%; border-radius: var(--bs-border-radius); position: relative; }
-.live-image { max-width: 100%; max-height: 76vh; display: block; border-radius: var(--bs-border-radius); }
+/* Sabit en-boy oranı (kaynak 1920x1080, bkz. Stage.jsx SOURCE_W/SOURCE_H) —
+   görüntü yüklenemediğinde (kamera koptu/bağlantı yok) çerçeve KÜÇÜLMEZ,
+   .live-image `object-fit: contain` ile kendi boyutuna sığar; görüntü
+   gelmezse Stage.jsx görünmez img yerine .live-fallback'i gösterir. */
+.live-frame {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: calc(76vh * 16 / 9);
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  border-radius: var(--bs-border-radius);
+  position: relative;
+  overflow: hidden;
+}
+.live-frame.is-empty { background: rgba(255, 255, 255, 0.03); }
+.live-image { width: 100%; height: 100%; object-fit: contain; display: block; }
+.live-image.is-hidden { visibility: hidden; }
+.live-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #6c7481;
+  font-size: 14px;
+  pointer-events: none;
+}
+.live-fallback .live-fallback-icon { font-size: 32px; opacity: 0.6; }
 
 /* ---- canlı görünüm: sağ üst kapat + sol/sağ kamera geçiş okları (Bootstrap'ta karşılığı yok) ---- */
 .live-close {

@@ -85,6 +85,7 @@ const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
   const imgRef = useRef(null);
   const [tileSize, setTileSize] = useState({ w: 0, h: 0 });
   const [requestWidth, setRequestWidth] = useState(320);
+  const [tileOk, setTileOk] = useState(true);
 
   // Kutucuk boyutu kamera sayısına/pencere genişliğine göre değişir (grid 4
   // sütun sabit, satır sayısı adapte olur) — sabit büyük genişlik (ör. 1920)
@@ -134,11 +135,11 @@ const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
     function tick() {
       if (cancelled) return;
       img.onerror = () => {
-        img.style.visibility = "hidden";
+        setTileOk(false);
         if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS);
       };
       img.onload = () => {
-        img.style.visibility = "";
+        setTileOk(true);
         if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS);
       };
       img.src = snapshotUrl(cam.id, requestWidth);
@@ -153,8 +154,14 @@ const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
   }, [cam.id, requestWidth]);
 
   return (
-    <button type="button" ref={btnRef} className="tile" onClick={() => onSelect(cam.id)}>
-      <img ref={imgRef} alt="önizleme" />
+    <button type="button" ref={btnRef} className={`tile ${tileOk ? "" : "is-empty"}`} onClick={() => onSelect(cam.id)}>
+      <img ref={imgRef} alt="önizleme" className={tileOk ? "" : "is-hidden"} />
+      {!tileOk && (
+        <div className="live-fallback tile-fallback">
+          <span className="live-fallback-icon">📡</span>
+          <span>Görüntü alınamıyor</span>
+        </div>
+      )}
       <TileDots analysis={analysis} minConfidence={minConfidence} tileW={tileSize.w} tileH={tileSize.h} />
       <span className="tile-label">
         <span className={`status-dot ${dotClass(cam)}`} />
@@ -181,6 +188,23 @@ function LiveCounts({ analysis, activeId, minConfidence }) {
   );
 }
 
+// Kamera sayısına göre otomatik satır/sütun hesaplayan eski davranış, kamera
+// eklenip çıkarıldıkça ızgaradaki mevcut kutucukların boyutunu/konumunu
+// değiştiriyordu. Bunun yerine NVR'lardaki gibi sabit ızgara ön ayarları
+// var — kullanıcı seçmediği sürece kameraları sığdıran en küçük ön ayar
+// varsayılan olur, seçince kamera sayısı değişse de sabit kalır.
+const GRID_LAYOUTS = [
+  { key: "2x2", cols: 2, rows: 2, label: "2×2" },
+  { key: "3x3", cols: 3, rows: 3, label: "3×3" },
+  { key: "4x4", cols: 4, rows: 4, label: "4×4" },
+  { key: "6x6", cols: 6, rows: 6, label: "6×6" },
+  { key: "8x8", cols: 8, rows: 8, label: "8×8" },
+];
+
+function defaultGridLayout(count) {
+  return GRID_LAYOUTS.find((l) => l.cols * l.rows >= count) || GRID_LAYOUTS[GRID_LAYOUTS.length - 1];
+}
+
 export default function Stage({
   cameras, active, analysis, analysisByCamera, minConfidence, onSelect, onClose, onFullscreen,
   metricsView, metrics, metricsOk, gpuHistory, onSetBatchSize, batchBusy, onChangeModel, modelBusy,
@@ -188,6 +212,9 @@ export default function Stage({
   const liveRef = useRef(null);
   const [labelsOn, setLabelsOn] = useState(true);
   const [trailsOn, setTrailsOn] = useState(false); // GEÇİCİ: yalnız test/görselleştirme (bkz. tracker.py)
+  const [liveOk, setLiveOk] = useState(true);
+  const [layoutKey, setLayoutKey] = useState(null); // null = otomatik (kameraları sığdıran en küçük ön ayar)
+  const [page, setPage] = useState(0); // ızgara kapasitesini aşan kameralar için sayfa (düzen değişince sıfırlanır)
 
   useEffect(() => {
     const img = liveRef.current;
@@ -196,6 +223,9 @@ export default function Stage({
     if (img.dataset.liveKey !== key) {
       img.removeAttribute("src"); // eski kameranın/moddaki MJPEG bağlantısı kapanmalı
       img.dataset.liveKey = key;
+      setLiveOk(true);
+      img.onload = () => setLiveOk(true);
+      img.onerror = () => setLiveOk(false);
       img.src = liveUrl(active.id, labelsOn, trailsOn);
     }
   }, [active, labelsOn, trailsOn]);
@@ -214,12 +244,47 @@ export default function Stage({
   }
 
   if (!active) {
-    const cols = 4;
-    const rows = Math.min(4, Math.max(1, Math.ceil(cameras.length / cols)));
+    const activeLayout = GRID_LAYOUTS.find((l) => l.key === layoutKey) || defaultGridLayout(cameras.length);
+    const { cols, rows } = activeLayout;
+    const capacity = cols * rows;
+    const pageCount = Math.max(1, Math.ceil(cameras.length / capacity));
+    const currentPage = Math.min(page, pageCount - 1);
+    const visibleCameras = cameras.slice(currentPage * capacity, currentPage * capacity + capacity);
     return (
       <section className="card stage">
+        <div className="d-flex justify-content-end align-items-center gap-3 w-100 mb-2">
+          {pageCount > 1 && (
+            <div className="d-flex align-items-center gap-2">
+              <button
+                type="button" className="btn btn-sm btn-outline-secondary"
+                onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={currentPage === 0}
+              >
+                ‹
+              </button>
+              <span className="small text-secondary">Sayfa {currentPage + 1}/{pageCount}</span>
+              <button
+                type="button" className="btn btn-sm btn-outline-secondary"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={currentPage >= pageCount - 1}
+              >
+                ›
+              </button>
+            </div>
+          )}
+          <div className="btn-group btn-group-sm" role="group" aria-label="Izgara düzeni">
+            {GRID_LAYOUTS.map((l) => (
+              <button
+                key={l.key} type="button"
+                className={`btn ${activeLayout.key === l.key ? "btn-secondary" : "btn-outline-secondary"}`}
+                onClick={() => { setLayoutKey(l.key); setPage(0); }}
+                title={`${l.cols}×${l.rows} ızgara`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="camera-grid" style={{ "--grid-cols": cols, "--grid-rows": rows }}>
-          {cameras.map((cam) => (
+          {visibleCameras.map((cam) => (
             <Tile
               key={cam.id} cam={cam} onSelect={onSelect}
               analysis={analysisByCamera?.[cam.id]} minConfidence={minConfidence}
@@ -239,8 +304,14 @@ export default function Stage({
   return (
     <section className="card stage">
       <div className="d-flex flex-column gap-2 w-100 align-items-center">
-        <div className="live-frame rounded position-relative">
-          <img ref={liveRef} className="live-image" alt="canlı görüntü" />
+        <div className={`live-frame rounded position-relative ${liveOk ? "" : "is-empty"}`}>
+          <img ref={liveRef} className={`live-image ${liveOk ? "" : "is-hidden"}`} alt="canlı görüntü" />
+          {!liveOk && (
+            <div className="live-fallback">
+              <span className="live-fallback-icon">📡</span>
+              <span>Görüntü alınamıyor</span>
+            </div>
+          )}
           <button type="button" className="btn btn-sm btn-outline-light live-close" onClick={onClose} title="Kapat, tüm kameralara dön">
             ✕
           </button>

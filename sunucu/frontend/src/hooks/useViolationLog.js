@@ -21,6 +21,7 @@ export function useViolationLog({ cameraId: initialCameraId } = {}) {
       // "reddedilen" artık kalıcı siliniyor (bkz. reject akışı) — geriye yalnız
       // onaylı kayıt kaldığı için durum filtresine gerek yok, hep "confirmed".
       const data = await fetchViolations({ page, size, from, to, cameraId, status: "confirmed" });
+
       setContent(data.content);
       setTotalPages(data.totalPages);
     } catch (err) {
