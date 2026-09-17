@@ -50,14 +50,8 @@
 }
 .canli-akis--focus .live-frame {
   height: 100vh;
-  border-radius: 0;
-}
-.canli-akis--focus .live-image {
   max-width: 100vw;
-  max-height: 100vh;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  aspect-ratio: auto;
   border-radius: 0;
 }
 .canli-akis--focus .camera-grid {

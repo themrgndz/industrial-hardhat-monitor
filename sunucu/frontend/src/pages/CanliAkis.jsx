@@ -11,18 +11,31 @@ import "./CanliAkis.css";
    overlay'i, önceki/sonraki kamera okları, tam ekran/odak modu) davranış
    olarak AYNEN korunuyor — sadece Ayarlar/Giriş ile tutarlı kabuk (BrandNavbar,
    particle arka plan, cam panel) içine alındı. Kamera yönetimi (ekle/sil/
-   düzenle) artık Ayarlar > Kamera Ayarları'nda; burası yalnız izleme. */
+   düzenle) artık Ayarlar > Kamera Ayarları'nda; burası yalnız izleme.
+
+   Grid/tekli görünüm geçişi BİLEREK hub.active'e değil, bu sayfaya özel
+   `viewingId` state'ine bağlı: hub.activeId sunucudaki "zamanlamanın o an
+   işlediği kamera" bilgisini tutar ve sayfa her mount olduğunda (veya 5 sn'lik
+   pollde) sunucudan gelen eski bir seçimle dolu olabilir — bu yüzden hub.active
+   kullanılsaydı sayfa bazen istemeden doğrudan tekli görünümle açılırdı.
+   Burada varsayılan HER ZAMAN genel ızgara (viewingId=null); bir kutucuğa
+   tıklanınca hem yerel görünüm hem de sunucudaki seçim güncellenir. */
 export default function CanliAkis() {
   const hub = useCameraHub();
   const [focusMode, setFocusMode] = useState(false);
+  const [viewingId, setViewingId] = useState(null);
 
-  async function handleSelect(id) {
-    await hub.selectCamera(id);
+  function handleSelect(id) {
+    setViewingId(id);
+    hub.selectCamera(id);
   }
 
-  async function handleClose() {
-    await hub.releaseCamera();
+  function handleClose() {
+    setViewingId(null);
+    hub.releaseCamera();
   }
+
+  const viewing = viewingId ? hub.cameras.find((c) => c.id === viewingId) || null : null;
 
   return (
     <div className={`canli-akis ${focusMode ? "canli-akis--focus" : ""}`}>
@@ -50,7 +63,7 @@ export default function CanliAkis() {
       <div className="canli-akis__shell glass-panel">
         <Stage
           cameras={hub.cameras}
-          active={hub.active}
+          active={viewing}
           analysis={hub.analysis}
           analysisByCamera={hub.analysisByCamera}
           minConfidence={hub.minConfidence}
