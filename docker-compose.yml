@@ -2,16 +2,13 @@
 #   1) NVIDIA driver + nvidia-container-toolkit host'ta kurulu olmalı
 #      (`docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi` çalışmalı).
 #   2) sunucu/.env (PG_*, BACKEND_API_KEY, ...), sunucu/cameras.docker.json,
-#      sunucu/config.docker.yaml, sunucu/detector/models/best.pt bu makinede
+#      sunucu/config.yaml, sunucu/detector/models/best.pt bu makinede
 #      hazır olmalı (hepsi gitignore'da — repo'dan gelmez, elle kopyalanır/scp).
-#      Bunlar detector/Dockerfile içine build-time COPY ile gömülür (host
-#      bind-mount değil — bazı Docker Desktop kurulumlarında (containerd
-#      snapshotter + Windows dosya paylaşımı) tek-dosya/host bind mount'lar
-#      boş dizin olarak görünüyor). cameras.docker.json ve logs/ihlal için
-#      named volume kullanılır (ilk çalıştırmada imajdaki içerikle dolar).
-#   3) docker compose up -d --build
+#      Bu dosyalar volume (bind-mount) ile konteynere dışarıdan bağlanmıştır (imajın içine gömülmesine gerek yoktur).
+#   3) docker compose up -d
 #   4) driver CUDA 12.4'ü desteklemiyorsa (nvidia-smi "CUDA Version" < 12.4):
-#      TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime docker compose up -d --build
+#      TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime docker compose up -d
+
 services:
   db:
     image: postgres:16-alpine
@@ -56,6 +53,8 @@ services:
       - detector_cameras:/app/sunucu/camera-state
       - detector_logs:/app/sunucu/logs/ihlal
       - ./sunucu/config.yaml:/app/sunucu/config.yaml:ro
+      - ./sunucu/cameras.docker.json:/app/sunucu/cameras.docker.json:ro
+      - ./sunucu/detector/models/best.pt:/app/sunucu/detector/models/best.pt:ro
     deploy:
       resources:
         reservations:
