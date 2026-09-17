@@ -1,0 +1,74 @@
+# Dağıtıma çıkmış (build edilmiş) imajlarla çalıştırma — repo klonlamaya gerek yok.
+#
+#   1) Bu dosyayla aynı klasöre bir `.env` oluştur (örnek aşağıda).
+#   2) NVIDIA GPU + nvidia-container-toolkit host'ta kurulu olmalı
+#      (`docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi` çalışmalı).
+#   3) docker compose -f docker-compose.deploy.yml up -d
+#
+# ÖNEMLİ — BACKEND_API_KEY:
+#   detector imajına (ghcr.io/themrgndz/ppe-detector) bu anahtar build-time'da
+#   zaten gömülü: 81d8ed00cdf229db0c9e45a342eea8fe
+#   .env'deki BACKEND_API_KEY bununla BİREBİR AYNI olmalı, aksi halde backend
+#   detector'dan gelen ihlal kayıtlarını 401 ile reddeder.
+#
+# .env örneği (bu dosyayla aynı klasöre koy):
+#   PG_DB=ppe
+#   PG_USER=ppe
+#   PG_PASSWORD=<kendi-ürettiğin-şifre>
+#   BACKEND_API_KEY=81d8ed00cdf229db0c9e45a342eea8fe
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DB}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    image: ghcr.io/themrgndz/ppe-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${PG_DB}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      BACKEND_API_KEY: ${BACKEND_API_KEY}
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_storage:/app/storage
+
+  detector:
+    image: ghcr.io/themrgndz/ppe-detector:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8090:8090"
+    volumes:
+      - detector_cameras:/app/sunucu/camera-state
+      - detector_logs:/app/sunucu/logs/ihlal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]
+
+volumes:
+  pgdata:
+  backend_storage:
+  detector_cameras:
+  detector_logs:
