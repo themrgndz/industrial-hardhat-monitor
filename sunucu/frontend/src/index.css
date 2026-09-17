@@ -2,6 +2,7 @@
    yazmak yerine Bootstrap'in öngördüğü resmi özelleştirme yöntemi budur.
    data-bs-theme="dark" index.html'de <html> üzerinde ayarlı. */
 [data-bs-theme="dark"] {
+  color-scheme: dark;
   --bs-body-bg: #0c0c0d;
   --bs-body-color: #eceef2;
   --bs-secondary-bg: #161616;
@@ -25,3 +26,11 @@
 html, body, #root { height: 100%; margin: 0; }
 body { font-size: 14px; }
 [hidden] { display: none !important; }
+
+/* Koyu/şeffaf "cam" panel — Bootstrap'ta karşılığı yok, sayfalar arası ortak
+   kullanım için burada global tanımlı (bkz. pages/Ayarlar.css). */
+.glass-panel {
+  background: rgba(12, 12, 13, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}

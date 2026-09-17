@@ -16,7 +16,7 @@ stream:
   idle_timeout_s: 20.0
 
 capture:
-  fps: 0.25
+  fps: 1.0
   continuous: true
   batch_size: 3
 

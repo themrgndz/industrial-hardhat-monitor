@@ -20,6 +20,7 @@ from .events import EventBus
 from .hub import CameraHub
 from .metrics import GpuMonitor, SchedulerStats
 from .model_control import ModelControl
+from .scheduling_control import SchedulingControl
 from .stream import tcp_reachable
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class _Server(ThreadingHTTPServer):
     def __init__(
         self, address, handler, cfg: Config, hub: CameraHub, bus: EventBus,
         scheduler_stats: SchedulerStats, gpu_monitor: GpuMonitor, engine_control: EngineControl,
-        capture_control: CaptureControl, model_control: ModelControl,
+        capture_control: CaptureControl, model_control: ModelControl, scheduling_control: SchedulingControl,
     ) -> None:
         super().__init__(address, handler)
         self.cfg = cfg
@@ -52,6 +53,7 @@ class _Server(ThreadingHTTPServer):
         self.engine_control = engine_control
         self.capture_control = capture_control
         self.model_control = model_control
+        self.scheduling_control = scheduling_control
 
     def handle_error(self, request, client_address) -> None:
         """MJPEG/SSE istemcisi sekmeyi kapattığında socketserver tam traceback
@@ -100,6 +102,10 @@ class _Handler(BaseHTTPRequestHandler):
     @property
     def _model_control(self) -> ModelControl:
         return self.server.model_control  # type: ignore[attr-defined]
+
+    @property
+    def _scheduling_control(self) -> SchedulingControl:
+        return self.server.scheduling_control  # type: ignore[attr-defined]
 
     def log_message(self, fmt: str, *args) -> None:
         logger.debug("http %s - %s", self.address_string(), fmt % args)
@@ -301,6 +307,27 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             snapshot = self._capture_control.set_batch_size(int(raw))
             self._bus.publish("capture", snapshot)
+            self._send_json(snapshot)
+            return
+        if path == "/api/scheduling":
+            if "mode" in body:
+                if body["mode"] not in ("all", "selected"):
+                    self._send_json({"error": "mode 'all' veya 'selected' olmalı"}, 400)
+                    return
+                self._scheduling_control.set_mode(body["mode"])
+            if "continuous" in body:
+                if not isinstance(body["continuous"], bool):
+                    self._send_json({"error": "continuous boolean olmalı"}, 400)
+                    return
+                self._scheduling_control.set_continuous(body["continuous"])
+            if "fps" in body:
+                raw_fps = body["fps"]
+                if not isinstance(raw_fps, (int, float)) or isinstance(raw_fps, bool) or raw_fps <= 0:
+                    self._send_json({"error": "fps pozitif sayısal olmalı"}, 400)
+                    return
+                self._scheduling_control.set_fps(float(raw_fps))
+            snapshot = self._scheduling_control.snapshot()
+            self._bus.publish("scheduling", snapshot)
             self._send_json(snapshot)
             return
 
@@ -565,7 +592,7 @@ class DetectorServer:
     def __init__(
         self, cfg: Config, hub: CameraHub, bus: EventBus,
         scheduler_stats: SchedulerStats, gpu_monitor: GpuMonitor, engine_control: EngineControl,
-        capture_control: CaptureControl, model_control: ModelControl,
+        capture_control: CaptureControl, model_control: ModelControl, scheduling_control: SchedulingControl,
     ) -> None:
         self._cfg = cfg
         self._hub = hub
@@ -575,6 +602,7 @@ class DetectorServer:
         self._engine_control = engine_control
         self._capture_control = capture_control
         self._model_control = model_control
+        self._scheduling_control = scheduling_control
         self._httpd: _Server | None = None
         self._thread: threading.Thread | None = None
 
@@ -583,7 +611,7 @@ class DetectorServer:
         self._httpd = _Server(
             address, _Handler, self._cfg, self._hub, self._bus,
             self._scheduler_stats, self._gpu_monitor, self._engine_control, self._capture_control,
-            self._model_control,
+            self._model_control, self._scheduling_control,
         )
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
