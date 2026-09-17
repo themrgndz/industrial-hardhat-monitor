@@ -50,15 +50,18 @@ services:
       - backend_storage:/app/storage
 
   detector:
-    image: ghcr.io/themrgndz/ppe-detector:latest
+    image: themrgndz/hardhat-detector:latest
     restart: unless-stopped
     depends_on:
       - backend
+    environment:
+      PPE_CONFIG: /app/sunucu/config.yaml
     ports:
       - "8090:8090"
     volumes:
       - detector_cameras:/app/sunucu/camera-state
       - detector_logs:/app/sunucu/logs/ihlal
+      - ./sunucu/config.yaml:/app/sunucu/config.yaml:ro
     deploy:
       resources:
         reservations:
