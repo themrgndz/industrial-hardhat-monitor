@@ -30,9 +30,7 @@ services:
       retries: 20
 
   backend:
-    build:
-      context: ./sunucu
-      dockerfile: backend/Dockerfile
+    image: themrgndz/hardhat-backend:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -46,11 +44,7 @@ services:
       - backend_storage:/app/storage
 
   detector:
-    build:
-      context: ./sunucu
-      dockerfile: detector/Dockerfile
-      args:
-        TORCH_BASE_IMAGE: ${TORCH_BASE_IMAGE:-pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime}
+    image: themrgndz/hardhat-detector:latest
     restart: unless-stopped
     depends_on:
       - backend
