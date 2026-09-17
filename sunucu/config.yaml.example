@@ -15,18 +15,23 @@ stream:
   idle_timeout_s: 20.0                   # izleyici yok + tarama gerekmiyorsa okuyucuyu kapat
 
 capture:
-  fps: 0.25                              # artık sabit slot değil, "hedef" tavan: continuous=true modda
-                                          # her kamera turu bu değerin (4s) altında kalırsa /api/metrics
-                                          # "yetişiyor" der (bkz. metrics.py SchedulerStats).
+  fps: 1.0                               # "hedef" tavan (saniye cinsinden 1/fps): continuous=true modda
+                                          # her kamera turu bu değerin (1s) altında kalırsa /api/metrics
+                                          # "yetişiyor" der (bkz. metrics.py SchedulerStats). Yalnız
+                                          # başlangıç değeri — arayüzden de canlı ayarlanabilir
+                                          # (bkz. POST /api/scheduling, Ayarlar > Model Ayarları).
   continuous: true                       # true → bir grubun çıkarımı biter bitmez hemen sıradaki gruba
                                           # geçilir (sabit bekleme yok). GPU boştaki süreyi de kullanır.
+                                          # Yalnız başlangıç değeri — arayüzden de canlı ayarlanabilir.
   batch_size: 3                          # her turda kaç kamera AYNI ANDA tek GPU çağrısında işlensin
                                           # (round-robin GRUP halinde ilerler); arayüzden de canlı
                                           # ayarlanabilir (bkz. POST /api/capture), bu yalnız başlangıç
                                           # değeri.
 
 monitoring:
-  mode: "all"                            # all = tüm kameralar round-robin ile sırayla işlenir (kamera N ise her biri 4s/N'de bir)
+  mode: "all"                            # all = tüm kameralar round-robin ile sırayla işlenir (kamera N ise
+                                          # her biri 1s/N'de bir); yalnız başlangıç değeri — arayüzden de
+                                          # canlı ayarlanabilir (bkz. POST /api/scheduling).
 
 server:
   host: "127.0.0.1"
@@ -61,6 +66,11 @@ tracking:
                                           # ölçülür.
   confirm_frames: 1                      # ilk analizde hemen ihlal panele düşsün; onay/red insan kararı
   cooldown_seconds: 60                   # aynı track için tekrar tekrar loglamayı önler
+  match_distance_ratio: 1.5              # IoU tutmazsa (capture.fps çok düşükken, örn. 0.25 = 4sn'de bir
+                                          # kare, hareketli nesne kutuları örtüşmeyi kaybedebilir) merkez
+                                          # mesafesi kutu köşegen ortalamasına oranla ikincil eşleşme
+                                          # adayı sayılır; böylece aynı kişi/nesne hareket ettiğinde yeni
+                                          # track_id ile ihlal TEKRAR raporlanmaz. 0 = devre dışı.
 
 logging:
   dir: "logs/ihlal"                      # içeride {gün.ay.yıl}/{kamera}/ alt klasörlenir

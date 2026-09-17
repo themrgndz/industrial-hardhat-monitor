@@ -64,8 +64,8 @@ public class Violation {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", nullable = false, length = 16,
-            columnDefinition = "varchar(16) not null default 'CONFIRMED'")
-    private ReviewStatus reviewStatus = ReviewStatus.CONFIRMED;
+            columnDefinition = "varchar(16) not null default 'PENDING'")
+    private ReviewStatus reviewStatus = ReviewStatus.PENDING;
 
     @Column(name = "reviewed_at")
     private Instant reviewedAt;

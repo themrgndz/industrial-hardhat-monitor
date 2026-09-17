@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass
 
 from .config import TrackingConfig
 from .inference import Detection
@@ -33,6 +34,43 @@ def _iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
     return inter / union if union > 0 else 0.0
 
 
+def _center(b: tuple[int, int, int, int]) -> tuple[float, float]:
+    x, y, w, h = b
+    return x + w / 2.0, y + h / 2.0
+
+
+def _diag(b: tuple[int, int, int, int]) -> float:
+    _, _, w, h = b
+    return math.hypot(w, h)
+
+
+def _match_score(
+    a: tuple[int, int, int, int], b: tuple[int, int, int, int],
+    iou_thresh: float, max_distance_ratio: float,
+) -> float | None:
+    """IoU eşiğini geçen çift her zaman tercih edilir (skor = iou > 0).
+    Geçmezse, kare-işleme aralığı yavaşken (çok kameralı üretimde ~4s, bkz.
+    InferenceEngine docstring'i) aynı kişi/nesne birkaç piksel değil, kendi
+    kutu boyutunun kat kat üstünde yer değiştirebilir; IoU bu durumda 0'a
+    düşer ve track kaybolup her seferinde YENİ track_id ile aynı ihlal tekrar
+    raporlanır (yeni track'in `last_reported_at=0.0` olması cooldown'u
+    atlatır). Bunu önlemek için IoU eşleşmezse merkez mesafesi, iki kutunun
+    ortalama köşegenine oranlanarak (negatif skorla, IoU eşleşmelerinden
+    HER ZAMAN düşük öncelikli) ikincil aday olarak kabul edilir."""
+    iou = _iou(a, b)
+    if iou >= iou_thresh:
+        return iou
+    if max_distance_ratio <= 0:
+        return None
+    ax, ay = _center(a)
+    bx, by = _center(b)
+    distance = math.hypot(ax - bx, ay - by)
+    max_distance = max_distance_ratio * (_diag(a) + _diag(b)) / 2.0
+    if max_distance > 0 and distance <= max_distance:
+        return -distance
+    return None
+
+
 class IoUTracker:
     """Ultralytics'in yerleşik `track()`'i kullanılmaz: SAHI çıktısı onunla uyumlu
     değil."""
@@ -41,6 +79,7 @@ class IoUTracker:
         self._run_id = run_id
         self._iou_thresh = cfg.iou_threshold
         self._max_age_seconds = cfg.max_age_seconds
+        self._max_distance_ratio = cfg.match_distance_ratio
         self._violation_label = violation_label
         self._tracks: dict[str, Track] = {}
         self._counter = 0
@@ -56,14 +95,14 @@ class IoUTracker:
         pairs: list[tuple[float, str, int]] = []
         for tid, track in self._tracks.items():
             for di, det in enumerate(detections):
-                iou = _iou(track.bbox, det.bbox)
-                if iou >= self._iou_thresh:
-                    pairs.append((iou, tid, di))
+                score = _match_score(track.bbox, det.bbox, self._iou_thresh, self._max_distance_ratio)
+                if score is not None:
+                    pairs.append((score, tid, di))
         pairs.sort(key=lambda p: p[0], reverse=True)
 
         matched_tracks: set[str] = set()
         matched_dets: set[int] = set()
-        for iou, tid, di in pairs:
+        for _score, tid, di in pairs:
             if tid in matched_tracks or di in matched_dets:
                 continue
             matched_tracks.add(tid)

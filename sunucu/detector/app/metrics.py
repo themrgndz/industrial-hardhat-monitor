@@ -37,26 +37,52 @@ class GpuMonitor:
             self._cached_at = now
             return self._cached
 
+    _QUERY_FIELDS = (
+        "name,utilization.gpu,utilization.memory,memory.used,memory.total,memory.free,"
+        "temperature.gpu,power.draw,power.limit,clocks.current.graphics,clocks.current.memory,fan.speed"
+    )
+
+    @staticmethod
+    def _num(raw: str) -> float | None:
+        """nvidia-smi desteklenmeyen alanlar için "[Not Supported]"/"[N/A]" döner —
+        sayıya çevrilemeyen her şey None (frontend "—" gösterir), hata fırlatmaz."""
+        try:
+            return float(raw.strip())
+        except ValueError:
+            return None
+
     def _query(self) -> dict:
         try:
             out = subprocess.run(
                 [
                     "nvidia-smi",
-                    "--query-gpu=name,utilization.gpu,memory.used,memory.total",
+                    f"--query-gpu={self._QUERY_FIELDS}",
                     "--format=csv,noheader,nounits",
                 ],
                 capture_output=True, text=True, timeout=_NVIDIA_SMI_TIMEOUT_S, check=True,
             )
             first_line = out.stdout.strip().splitlines()[0]
-            name, util, used, total = (p.strip() for p in first_line.split(",")[:4])
-            used_mb, total_mb = float(used), float(total)
+            parts = [p.strip() for p in first_line.split(",")]
+            (name, util, mem_util, used, total, free,
+             temp, power_draw, power_limit, clock_gr, clock_mem, fan) = parts[:12]
+            used_mb, total_mb = self._num(used), self._num(total)
+            power_draw_w, power_limit_w = self._num(power_draw), self._num(power_limit)
             return {
                 "available": True,
                 "name": name,
-                "utilizationPercent": float(util),
-                "memoryUsedMb": round(used_mb),
-                "memoryTotalMb": round(total_mb),
-                "memoryPercent": round(used_mb / total_mb * 100, 1) if total_mb else 0.0,
+                "utilizationPercent": self._num(util) or 0.0,
+                "memoryUtilizationPercent": self._num(mem_util),
+                "memoryUsedMb": round(used_mb) if used_mb is not None else None,
+                "memoryTotalMb": round(total_mb) if total_mb is not None else None,
+                "memoryFreeMb": round(self._num(free)) if self._num(free) is not None else None,
+                "memoryPercent": round(used_mb / total_mb * 100, 1) if used_mb and total_mb else 0.0,
+                "temperatureC": self._num(temp),
+                "powerDrawW": power_draw_w,
+                "powerLimitW": power_limit_w,
+                "powerPercent": round(power_draw_w / power_limit_w * 100, 1) if power_draw_w and power_limit_w else None,
+                "clockGraphicsMhz": self._num(clock_gr),
+                "clockMemoryMhz": self._num(clock_mem),
+                "fanPercent": self._num(fan),
             }
         except Exception as exc:  # noqa: BLE001 — nvidia-smi eksik/başarısız, servis düşmemeli
             logger.warning("nvidia-smi sorgusu başarısız: %s", exc)

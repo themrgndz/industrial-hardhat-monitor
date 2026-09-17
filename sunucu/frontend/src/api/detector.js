@@ -44,6 +44,28 @@ export async function updateBatchSize(batchSize) {
   return data;
 }
 
+export async function updateScheduling(partial) {
+  const res = await fetch(`${DETECTOR}/api/scheduling`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(partial),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error || `Hata ${res.status}`), { data });
+  return data;
+}
+
+export async function selectModel(file) {
+  const res = await fetch(`${DETECTOR}/api/models/select`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error || `Hata ${res.status}`), { data });
+  return data;
+}
+
 export async function selectCamera(id) {
   const res = await fetch(`${DETECTOR}/api/cameras/${encodeURIComponent(id)}/select`, { method: "POST" });
   if (!res.ok) throw new Error(String(res.status));
@@ -97,9 +119,9 @@ export function snapshotUrl(id, width) {
   return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?w=${width}&t=${Date.now()}`;
 }
 
-export function liveUrl(id, labelsOn = true, width) {
+export function liveUrl(id, labelsOn = true, trailsOn = false, width) {
   const w = width ? `&w=${width}` : "";
-  return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/live.mjpg?labels=${labelsOn ? 1 : 0}${w}`;
+  return `${DETECTOR}/api/cameras/${encodeURIComponent(id)}/live.mjpg?labels=${labelsOn ? 1 : 0}&trails=${trailsOn ? 1 : 0}${w}`;
 }
 
 export async function fetchSettings() {

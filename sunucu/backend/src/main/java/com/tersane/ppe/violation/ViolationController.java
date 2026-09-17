@@ -116,13 +116,13 @@ public class ViolationController {
 
         String normalizedStatus = status.toUpperCase(Locale.ROOT);
         switch (normalizedStatus) {
-            case "CONFIRMED", "REJECTED" -> {
+            case "CONFIRMED", "REJECTED", "PENDING" -> {
                 ReviewStatus rs = ReviewStatus.valueOf(normalizedStatus);
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("reviewStatus"), rs));
             }
             case "ALL" -> { /* filtre yok */ }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Geçersiz status değeri: " + status + ". Beklenen: confirmed, rejected, all");
+                    "Geçersiz status değeri: " + status + ". Beklenen: confirmed, rejected, pending, all");
         }
 
         var pageResult = repository.findAll(spec,

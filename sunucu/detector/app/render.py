@@ -7,6 +7,7 @@ from .inference import Detection
 
 _VIOLATION_COLOR = (0, 0, 255)
 _OK_COLOR = (0, 200, 0)
+_TRAIL_COLOR = (0, 255, 255)  # GEÇİCİ: yalnız tracker rota görselleştirmesi için (bkz. hub.py trails)
 _FONT = cv2.FONT_HERSHEY_SIMPLEX
 _FONT_SCALE = 0.4
 _THICKNESS = 2
@@ -17,11 +18,15 @@ def draw(
     detections: list[Detection],
     violation_label: str,
     out_width: int,
+    trails: dict[str, list[tuple[int, int]]] | None = None,
 ) -> np.ndarray:
     """Kareyi `out_width` genişliğine küçültür ve bbox'ları ölçekleyip çizer.
 
     Kaynak kare asla yerinde değiştirilmez (aynı numpy tamponu StreamReader'ın
     canlı `_latest` referansıdır).
+
+    `trails` — GEÇİCİ (yalnız test/görselleştirme): track_id -> merkez nokta
+    listesi; verilirse her track için sarı bir rota çizgisi çizilir.
     """
     src_h, src_w = frame.shape[:2]
     if src_w <= 0 or src_h <= 0:
@@ -35,10 +40,25 @@ def draw(
     else:
         canvas = frame.copy()
 
+    canvas_h, canvas_w = canvas.shape[:2]
+    if trails:
+        for pts in trails.values():
+            if len(pts) < 2:
+                continue
+            scaled = [
+                (
+                    max(0, min(canvas_w - 1, int(round(px * scale)))),
+                    max(0, min(canvas_h - 1, int(round(py * scale)))),
+                )
+                for px, py in pts
+            ]
+            cv2.polylines(
+                canvas, [np.array(scaled, dtype=np.int32)], False, _TRAIL_COLOR, 2, cv2.LINE_AA,
+            )
+
     if not detections:
         return canvas
 
-    canvas_h, canvas_w = canvas.shape[:2]
     for det in detections:
         x, y, w, h = det.bbox
         x1 = int(round(x * scale))

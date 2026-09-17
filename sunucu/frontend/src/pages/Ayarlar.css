@@ -1,0 +1,85 @@
+/* Tam sayfayı kaplayan, kenarlarda ince boşluklu konteyner + Bootstrap
+   nav-tabs'ın koyu temaya uydurulmuş hali (Bootstrap'ın kendi nav-tabs
+   rengi light temaya göre; burada sadece renk/alt-çizgi override ediliyor). */
+.ayarlar {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 20% 15%, #163d73 0%, #0c0c0d 45%);
+}
+
+/* TEST — particle arkaplanının cam panelin içinden sızması için geçici
+   opaklık düşürme; deneme sonrası ya kalıcı yapılacak ya da 0.72'ye geri
+   alınacak (bkz. Ayarlar.jsx Particles entegrasyonu). */
+.ayarlar__shell.glass-panel {
+  background: rgba(12, 12, 13, 0.25);
+}
+
+/* Bootstrap'ın .card, .form-control ve .table'ı kendi opak arkaplanını taşır
+   (--bs-body-bg / --bs-table-bg) — .glass-panel kabuğun (.ayarlar__shell)
+   şeffaflığını bunların İÇİNDE de görebilmek için burada saydamlaştırılıyor,
+   aksi halde her biri dümdüz siyah görünür. */
+.ayarlar__shell .card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--bs-border-color);
+}
+.ayarlar__shell .form-control,
+.ayarlar__shell .form-select {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--bs-border-color);
+}
+.ayarlar__shell .form-control:focus,
+.ayarlar__shell .form-select:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.ayarlar__shell .form-select option {
+  background-color: #161616;
+  color: var(--bs-body-color);
+}
+.ayarlar__shell .table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+.ayarlar__shell {
+  position: fixed;
+  top: 72px;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ayarlar__tabs {
+  border-bottom: 1px solid var(--bs-border-color);
+  padding: 8px 16px 0;
+  flex: 0 0 auto;
+}
+.ayarlar__tabs .nav-link {
+  color: #9aa0ab;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.ayarlar__tabs .nav-link:hover {
+  color: #d7dae0;
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+.ayarlar__tabs .nav-link.active {
+  color: #fff;
+  background: transparent;
+  border-bottom-color: var(--bs-primary);
+}
+
+.ayarlar__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+}

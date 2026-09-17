@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchMetrics, pauseEngine, resumeEngine, updateBatchSize } from "../api/detector.js";
+import { fetchMetrics, pauseEngine, resumeEngine, selectModel, updateBatchSize, updateScheduling } from "../api/detector.js";
 
 const METRICS_POLL_MS = 3000;
 // 3 saniyelik aralıkla 120 örnek = son 6 dakikalık GPU geçmişi.
@@ -18,7 +18,15 @@ export function useMetrics() {
       if (data.gpu?.available) {
         setGpuHistory((prev) => [
           ...prev,
-          { t: Date.now(), util: data.gpu.utilizationPercent, mem: data.gpu.memoryPercent },
+          {
+            t: Date.now(),
+            util: data.gpu.utilizationPercent,
+            mem: data.gpu.memoryPercent,
+            memUtil: data.gpu.memoryUtilizationPercent,
+            temp: data.gpu.temperatureC,
+            power: data.gpu.powerDrawW,
+            powerPct: data.gpu.powerPercent,
+          },
         ].slice(-HISTORY_LIMIT));
       }
     } catch {
@@ -43,5 +51,15 @@ export function useMetrics() {
     await refresh();
   }, [refresh]);
 
-  return { metrics, ok, gpuHistory, refresh, toggleEngine, setBatchSize };
+  const changeModel = useCallback(async (file) => {
+    await selectModel(file);
+    await refresh();
+  }, [refresh]);
+
+  const setScheduling = useCallback(async (partial) => {
+    await updateScheduling(partial);
+    await refresh();
+  }, [refresh]);
+
+  return { metrics, ok, gpuHistory, refresh, toggleEngine, setBatchSize, changeModel, setScheduling };
 }
