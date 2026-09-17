@@ -174,10 +174,9 @@ export default function EvidenceModal({ evidence, onClose, onReview, onAdvance }
               <div className="text-center">
                 <div className="text-secondary small mb-1">Kırpılmış görüntü</div>
                 <img
-                  className="rounded border"
+                  src={evidenceCropUrl(evidence.id)}
                   style={{ maxWidth: 180, maxHeight: 140, objectFit: "cover" }}
                   alt="ihlal kırpma"
-                  src={evidenceCropUrl(evidence.id)}
                 />
               </div>
             )}
