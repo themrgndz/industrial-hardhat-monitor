@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import BrandNavbar from "../components/BrandNavbar.jsx";
+import Particles from "../components/Particles.jsx";
 import { usePageTransition } from "../context/PageTransition.jsx";
 import "./Giris.css";
 
@@ -11,12 +12,28 @@ const BOLUMLER = [
 
 /* Giriş sayfası: içerik taşımaz, sadece diğer 3 sayfaya (Ayarlar, Canlı Akış,
    İhlaller) giden tam ekran, diyagonal 3 parçalı bir yönlendirme ekranı.
-   Varsayılan olarak her parça (görsel + başlık) bulanık; üzerine gelinen
-   parça netleşip hafifçe yakınlaşır, diğer ikisi bulanık kalır. */
+   Varsayılan olarak her parça (görsel + başlık) net/okunabilir; fareyle
+   üzerine gelindiğinde diğer ikisi bulanıklaşır, üzerine gelinen daima net
+   kalır ve hafifçe yakınlaşır. */
 export default function Giris() {
   const goTo = usePageTransition();
   return (
     <div className="giris">
+      <div style={{ position: "fixed", inset: 0, zIndex: 10, pointerEvents: "none" }}>
+        <Particles
+          particleColors={["#ffffff"]}
+          particleCount={580}
+          particleSpread={4}
+          speed={0.035}
+          particleBaseSize={100}
+          sizeRandomness={0.25}
+          cameraDistance={12}
+          moveParticlesOnHover={false}
+          particleHoverFactor={0}
+          alphaParticles
+          disableRotation={false}
+        />
+      </div>
       <BrandNavbar />
 
       <nav className="giris__shell" aria-label="Sayfa seçimi">

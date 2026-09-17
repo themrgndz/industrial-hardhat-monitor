@@ -12,30 +12,45 @@
   inset: 0;
 }
 
+/* Varsayılan: her parça net/okunabilir (blur yok). Fare şu üzerine
+   (.giris__shell) geldiğinde, hover/focus edilmeyen parçalar bulanıklaşır;
+   aktif parça daima net kalır. */
 .giris__panel {
   position: absolute;
   inset: 0;
   text-decoration: none;
-  filter: blur(7px) brightness(0.5) saturate(0.8);
+  filter: blur(0) brightness(1) saturate(1);
   transition: filter 0.45s ease;
+}
+.giris__shell:hover .giris__panel:not(:hover):not(:focus-within) {
+  filter: blur(4px) brightness(0.85) saturate(1);
 }
 .giris__panel:hover,
 .giris__panel:focus-visible {
-  filter: blur(0) brightness(1) saturate(1);
-  z-index: 2;
+  z-index: 20;
 }
 
+/* Aktif (hover/focus) parçada arkaplan rengi kısmen saydamlaşır — panel
+   z-index'i particles katmanının (z-index 10) üzerine çıktığı için (aşağıda),
+   bu saydamlıktan uçuşan nokta efekti GERÇEKTEN sızar (basit alfa
+   karışımı, backdrop-filter hilesi değil); .giris__label panelin en üstünde
+   opak çizildiği için hiçbir zaman bulanıklaşmaz/bloklanmaz. Diğer (hover
+   edilmeyen) parçalarda panel particles'ın ALTINDA kaldığından efekt tam
+   parlaklıkla üstlerinden geçer — aktif parçada bu yüzden kıyasla "daha az
+   görünür" olur. */
 .giris__bg {
   position: absolute;
   inset: -6%;
   background-size: cover;
   background-position: center;
   transform: scale(1.08);
-  transition: transform 0.6s ease;
+  opacity: 1;
+  transition: transform 0.6s ease, opacity 0.45s ease;
 }
 .giris__panel:hover .giris__bg,
 .giris__panel:focus-visible .giris__bg {
   transform: scale(1.18);
+  opacity: 0.85;
 }
 
 .giris__overlay {
