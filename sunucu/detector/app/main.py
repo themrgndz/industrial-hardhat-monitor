@@ -21,8 +21,10 @@ from .config import Config
 from .engine_control import EngineControl
 from .events import EventBus
 from .hub import CameraHub, CameraState
-from .inference import Detection, InferenceEngine
+from .inference import Detection
 from .metrics import GpuMonitor, SchedulerStats
+from .model_control import ModelControl
+from .scheduling_control import SchedulingControl
 from .server import DetectorServer
 from .tracker import Track
 from .violations import ViolationRecord, ViolationWorker
@@ -38,7 +40,10 @@ class Application:
     def __init__(self, cfg: Config) -> None:
         self._cfg = cfg
         self._bus = EventBus()
-        self._engine = InferenceEngine(cfg.model, cfg.sahi)
+        self._model_control = ModelControl(
+            cfg.model, cfg.sahi,
+            Path(cfg.cameras_file).resolve().parent / "model_settings.json",
+        )
         self._backend: BackendClient | None = None
         self._retry_worker: RetryWorker | None = None
         if cfg.backend.enabled:
@@ -53,9 +58,14 @@ class Application:
             Path(cfg.cameras_file).resolve().parent / "capture_settings.json",
             default=cfg.capture.batch_size, max_value=16,
         )
+        self._scheduling_control = SchedulingControl(
+            Path(cfg.cameras_file).resolve().parent / "scheduling_settings.json",
+            default_mode=cfg.monitoring.mode, default_continuous=cfg.capture.continuous,
+            default_fps=cfg.capture.fps,
+        )
         self._server = DetectorServer(
             cfg, self._hub, self._bus, self._scheduler_stats, self._gpu_monitor,
-            self._engine_control, self._capture_control,
+            self._engine_control, self._capture_control, self._model_control, self._scheduling_control,
         )
 
         self._stop = False
@@ -70,8 +80,6 @@ class Application:
         self._violation_worker.start()
         self._server.start()
 
-        continuous = self._cfg.capture.continuous
-        base_interval = 1.0 / self._cfg.capture.fps
         next_tick = time.monotonic()
         try:
             while not self._stop:
@@ -82,6 +90,8 @@ class Application:
                     self._maybe_log_summary()
                     continue
 
+                continuous = self._scheduling_control.continuous
+                base_interval = 1.0 / self._scheduling_control.fps
                 targets = self._scheduling_target_count()
                 group_size = self._group_size(targets)
                 # Bir "tur" (lap) tüm kameraları bir kez kapsar; grup halinde
@@ -102,7 +112,7 @@ class Application:
                         )
                         next_tick = time.monotonic()
                 self._scheduler_stats.update(
-                    self._cfg.monitoring.mode, continuous, base_interval, targets, interval, lag_ms,
+                    self._scheduling_control.mode, continuous, base_interval, targets, interval, lag_ms,
                     group_size,
                 )
 
@@ -146,7 +156,7 @@ class Application:
 
                 try:
                     batch_start = time.monotonic()
-                    batch_detections = self._engine.predict_batch([frame for _, frame, _ in ready])
+                    batch_detections = self._model_control.engine.predict_batch([frame for _, frame, _ in ready])
                     per_camera_ms = (time.monotonic() - batch_start) * 1000 / len(ready)
                     for (state, frame, seq), detections in zip(ready, batch_detections):
                         try:
@@ -166,7 +176,7 @@ class Application:
     def _scheduling_target_count(self) -> int:
         """Bu döngüde sırayla işlenecek kamera sayısı: tur aralığı
         base_interval / bu sayı olur, her kamera döngü başına bir kez alır."""
-        if self._cfg.monitoring.mode == "selected":
+        if self._scheduling_control.mode == "selected":
             return 1 if self._hub.active_id is not None else 0
         return len(self._hub.camera_ids)
 
@@ -175,7 +185,7 @@ class Application:
         mode=selected'da tek hedef zaten var, gruplamanın anlamı yok.
         Config'teki başlangıç değeri yerine arayüzden canlı ayarlanabilen
         `CaptureControl.batch_size` kullanılır (bkz. POST /api/capture)."""
-        if self._cfg.monitoring.mode == "selected" or not targets:
+        if self._scheduling_control.mode == "selected" or not targets:
             return 1
         return max(1, min(self._capture_control.batch_size, targets))
 
@@ -184,7 +194,7 @@ class Application:
         Round-robin GRUP halinde ilerler: 12 kamera + grup=4 → 4'erli 3 tur.
         mode=selected iken yalnızca aktif kamerayı içeren tek elemanlı liste
         döner (aktif kameraya öncelik yok, herkes eşit sırayla)."""
-        if self._cfg.monitoring.mode == "selected":
+        if self._scheduling_control.mode == "selected":
             active = self._hub.active_id
             return [active] if active is not None else []
         ids = self._hub.camera_ids

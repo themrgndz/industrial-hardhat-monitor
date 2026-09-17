@@ -1,0 +1,14 @@
+/* Route değişiminde karart/aç efekti — Bootstrap'ta karşılığı yok. */
+.page-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.page-fade--dark {
+  opacity: 1;
+  pointer-events: all;
+}

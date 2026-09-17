@@ -44,6 +44,28 @@ export async function updateBatchSize(batchSize) {
   return data;
 }
 
+export async function updateScheduling(partial) {
+  const res = await fetch(`${DETECTOR}/api/scheduling`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(partial),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error || `Hata ${res.status}`), { data });
+  return data;
+}
+
+export async function selectModel(file) {
+  const res = await fetch(`${DETECTOR}/api/models/select`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error || `Hata ${res.status}`), { data });
+  return data;
+}
+
 export async function selectCamera(id) {
   const res = await fetch(`${DETECTOR}/api/cameras/${encodeURIComponent(id)}/select`, { method: "POST" });
   if (!res.ok) throw new Error(String(res.status));

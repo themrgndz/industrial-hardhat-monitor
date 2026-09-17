@@ -1,0 +1,103 @@
+/* Diyagonal 3 parçalı tam ekran yönlendirme — clip-path + blur/hover, Bootstrap'ta
+   karşılığı olmayan tek yer burası; renk/spacing token'ları index.css'teki
+   [data-bs-theme="dark"] değişkenleriyle aynı. */
+.giris {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.giris__shell {
+  position: absolute;
+  inset: 0;
+}
+
+.giris__panel {
+  position: absolute;
+  inset: 0;
+  text-decoration: none;
+  filter: blur(7px) brightness(0.5) saturate(0.8);
+  transition: filter 0.45s ease;
+}
+.giris__panel:hover,
+.giris__panel:focus-visible {
+  filter: blur(0) brightness(1) saturate(1);
+  z-index: 2;
+}
+
+.giris__bg {
+  position: absolute;
+  inset: -6%;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  transition: transform 0.6s ease;
+}
+.giris__panel:hover .giris__bg,
+.giris__panel:focus-visible .giris__bg {
+  transform: scale(1.18);
+}
+
+.giris__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 5, 6, 0.35) 0%, rgba(5, 5, 6, 0.72) 100%);
+}
+
+.giris__label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  font-size: clamp(20px, 2.4vw, 32px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+.giris__icon {
+  font-size: clamp(28px, 3.4vw, 44px);
+  line-height: 1;
+}
+.giris__label small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Panel arkaplanı tüm alanı kaplayıp clip-path ile dilime indirgenir; ama
+   içindeki etiket bu kırpılmamış tam kutunun ortasında sabit durur — bu
+   yüzden her dilimin görünür alanının yatay ortasına (66.6% üst+alt kenar
+   ortalaması) elle konumlandırılıyor, aksi halde sadece ekranın tam ortasını
+   kapsayan dilimin (Canlı Akış) etiketi görünür, diğer ikisi kendi diliminin
+   dışında kalıp kırpılırdı. */
+.giris__panel--ayarlar { clip-path: polygon(0% 0%, 41.3% 0%, 25.3% 100%, 0% 100%); }
+.giris__panel--ayarlar .giris__label { left: 16.65%; }
+.giris__panel--canli { clip-path: polygon(41.3% 0%, 74.6% 0%, 58.6% 100%, 25.3% 100%); }
+.giris__panel--ihlaller { clip-path: polygon(74.6% 0%, 100% 0%, 100% 100%, 58.6% 100%); }
+.giris__panel--ihlaller .giris__label { left: 83.35%; }
+
+.giris__panel--ayarlar .giris__bg { background: radial-gradient(circle at 17% 45%, #1c4a89 0%, #0a1c33 65%, #060d18 100%); }
+.giris__panel--canli .giris__bg { background: radial-gradient(circle at 50% 40%, #1c3f63 0%, #0a1826 65%, #050d16 100%); }
+.giris__panel--ihlaller .giris__bg { background: radial-gradient(circle at 83% 45%, #4d3814 0%, #201708 65%, #0f0a03 100%); }
+
+.giris__dividers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+.giris__dividers line {
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 0.18;
+}
