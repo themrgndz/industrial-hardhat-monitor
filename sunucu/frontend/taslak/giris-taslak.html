@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Giriş — Taslak</title>
+<style>
+  /* Proje temasıyla birebir aynı token'lar (src/index.css) */
+  :root {
+    --bs-body-bg: #0c0c0d;
+    --bs-body-color: #eceef2;
+    --bs-border-color: #2c2c2c;
+    --bs-primary: #4c8dff;
+    --bs-warning: #f2a93c;
+    --bs-danger: #f2415f;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    overflow: hidden;
+  }
+  .brand {
+    font-size: 13px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #7d8290;
+    opacity: .8;
+  }
+  .nav-shell {
+    position: relative;
+    width: min(1400px, 94vw);
+    height: min(640px, 78vh);
+    border-radius: 20px;
+    border: 1px solid var(--bs-border-color);
+    overflow: hidden;
+    background: #050505;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  }
+  .nav-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    filter: blur(7px) brightness(.5) saturate(.8);
+    transition: filter .45s ease;
+    will-change: filter;
+  }
+  .nav-panel:hover, .nav-panel:focus-visible { filter: blur(0) brightness(1) saturate(1); z-index: 2; }
+
+  .nav-bg {
+    position: absolute;
+    inset: -6%;
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.08);
+    transition: transform .6s ease;
+  }
+  .nav-panel:hover .nav-bg, .nav-panel:focus-visible .nav-bg { transform: scale(1.18); }
+
+  .nav-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(5,5,6,.35) 0%, rgba(5,5,6,.72) 100%);
+  }
+
+  .nav-label {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(20px, 2.4vw, 32px);
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: #fff;
+    text-shadow: 0 2px 18px rgba(0,0,0,.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .nav-label .icon { font-size: clamp(28px, 3.4vw, 44px); line-height: 1; }
+  .nav-label small {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.65);
+  }
+
+  /* Konum ataması: her panel tüm alanı kaplar, clip-path ile diyagonal
+     dilimine indirgenir -> boşluksuz, kaymasız tam kaplama. */
+  .p-ayarlar   { clip-path: polygon(0% 0%, 41.3% 0%, 25.3% 100%, 0% 100%); }
+  .p-canli     { clip-path: polygon(41.3% 0%, 74.6% 0%, 58.6% 100%, 25.3% 100%); }
+  .p-ihlaller  { clip-path: polygon(74.6% 0%, 100% 0%, 100% 100%, 58.6% 100%); }
+
+  .p-ayarlar .nav-bg  { background: radial-gradient(circle at 17% 45%, #1c4a89 0%, #0a1c33 65%, #060d18 100%); }
+  .p-canli .nav-bg    { background: radial-gradient(circle at 50% 40%, #1c3f63 0%, #0a1826 65%, #050d16 100%); }
+  .p-ihlaller .nav-bg { background: radial-gradient(circle at 83% 45%, #4d3814 0%, #201708 65%, #0f0a03 100%); }
+
+  .dividers {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .dividers line { stroke: rgba(255,255,255,.28); stroke-width: .18; }
+
+  .hint {
+    font-size: 12px;
+    color: #5c616d;
+  }
+</style>
+</head>
+<body>
+  <div class="brand">Tersane PPE Kask Tespit</div>
+
+  <div class="nav-shell">
+    <a class="nav-panel p-ayarlar" href="#ayarlar">
+      <div class="nav-bg"></div>
+      <div class="nav-overlay"></div>
+      <div class="nav-label"><span class="icon">⚙</span>Ayarlar<small>Sistem &amp; kamera yapılandırması</small></div>
+    </a>
+
+    <a class="nav-panel p-canli" href="#canli-akis">
+      <div class="nav-bg"></div>
+      <div class="nav-overlay"></div>
+      <div class="nav-label"><span class="icon">◉</span>Canlı Akış<small>Anlık kamera izleme</small></div>
+    </a>
+
+    <a class="nav-panel p-ihlaller" href="#ihlaller">
+      <div class="nav-bg"></div>
+      <div class="nav-overlay"></div>
+      <div class="nav-label"><span class="icon">⚠</span>İhlaller<small>Kayıt &amp; kanıt geçmişi</small></div>
+    </a>
+
+    <svg class="dividers" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <line x1="41.3" y1="0" x2="25.3" y2="100" />
+      <line x1="74.6" y1="0" x2="58.6" y2="100" />
+    </svg>
+  </div>
+
+  <div class="hint">Bir bölümün üzerine gelin — o bölüm netleşip yakınlaşacak, diğerleri bulanık kalacak.</div>
+</body>
+</html>

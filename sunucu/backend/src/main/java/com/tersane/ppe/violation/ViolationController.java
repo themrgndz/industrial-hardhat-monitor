@@ -85,10 +85,18 @@ public class ViolationController {
             repository.save(v);
         } catch (DataIntegrityViolationException e) {
             // eşzamanlı retry: aynı üçlü başka bir istek tarafından az önce kaydedildi
-            Violation existingAfterRace = repository
-                    .findByCameraIdAndTrackIdAndDetectedAt(meta.cameraId(), meta.trackId(), meta.detectedAt())
-                    .orElseThrow(() -> e);
-            return ResponseEntity.ok(Map.of("id", existingAfterRace.getId()));
+            Optional<Violation> existingAfterRace = repository
+                    .findByCameraIdAndTrackIdAndDetectedAt(meta.cameraId(), meta.trackId(), meta.detectedAt());
+            if (existingAfterRace.isPresent()) {
+                return ResponseEntity.ok(Map.of("id", existingAfterRace.get().getId()));
+            }
+            // gerçek bir ekleme hatası (ör. veritabanında elle eklenmiş bozuk bir
+            // kısıt): DB satırı hiç oluşmadı, az önce diske yazılan kanıt
+            // görselleri sahipsiz kalır ve uygulama tarafından bir daha asla
+            // görünmez/silinmez — bu yüzden burada geri temizlenir.
+            imageStorage.delete(relativePath);
+            imageStorage.delete(cropRelativePath);
+            throw e;
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", v.getId()));
     }

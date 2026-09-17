@@ -95,6 +95,8 @@ export default function Ihlaller() {
                      lastHour={null} 
                      cameraById={(id) => hub.cameras.find((c) => c.id === id)}
                      onReview={live.review}
+                     onDismiss={live.dismiss}
+                     onClear={live.clear}
                      onOpenEvidence={handleOpenEvidence}
                    />
                  </div>
