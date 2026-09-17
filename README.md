@@ -15,6 +15,20 @@ YOLO11 tabanlı bir nesne tespit modeli, SAHI dilimli çıkarım ile küçük/uz
 - **İhlal kanıt zinciri** — her ihlal için tam kare + kırpılmış kanıt görseli diske ve merkezi backend'e (Postgres) kaydedilir; web arayüzünden onay/red iş akışı ve PDF rapor üretimi.
 - **Docker Compose ile tek komutla dağıtım** — detector (Python/GPU), backend (Spring Boot), frontend (React, backend içine gömülü) ve Postgres tek `docker compose up` ile ayağa kalkar.
 
+## Ekran Görüntüleri
+
+| Ana menü | Çok kameralı izleme |
+|---|---|
+| ![Ana Menü](docs/screenshots/ana-menu.png) | ![Kameralar](docs/screenshots/kameralar.png) |
+
+| Kamera yönetimi | İhlal kayıtları |
+|---|---|
+| ![Kamera Ayarları](docs/screenshots/kamera-ayarlari.png) | ![İhlal Kayıtları](docs/screenshots/ihlal-kayitlari.png) |
+
+| Model seçimi & zamanlama | GPU/tur metrikleri |
+|---|---|
+| ![Model Ayarları](docs/screenshots/model-ayarlari.png) | ![GPU Takip](docs/screenshots/gpu-takip.png) |
+
 ## Mimari
 
 ```mermaid
@@ -58,6 +72,10 @@ flowchart LR
 git clone <bu-repo>
 cd <bu-repo>
 
+# Git LFS: model ağırlıkları (sunucu/detector/models/*.pt) LFS üzerinden gelir
+git lfs install
+git lfs pull
+
 # Gizli/ortam değişkenlerini örnekten türet
 cp .env.example sunucu/.env
 cp sunucu/config.yaml.example sunucu/config.yaml
@@ -80,17 +98,21 @@ TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime docker compose up
 
 Tüm çalışma zamanı ayarları `sunucu/config.yaml` (yerel) / `sunucu/config.docker.yaml` (Docker) dosyalarında toplanır — kamera akış zamanlaması, model eşikleri, SAHI dilimleme, kimlik takibi (tracker) ve ihlal loglama davranışı buradan kontrol edilir. Kamera listesi ayrı bir JSON dosyasında (`sunucu/cameras.json` / `sunucu/cameras.docker.json`) tutulur ve çalışma anında API üzerinden de yönetilebilir.
 
+`sunucu/detector/models/` altında birden fazla eğitim çıktısı (`best.pt`, `bestEski.pt`, `bestGüncel.pt`, `epoch70.pt`) Git LFS ile depoda tutulur; aktif model, web arayüzündeki **Model Ayarları** sekmesinden (yukarıdaki ekran görüntüsü) yeniden başlatma gerekmeden değiştirilip zamanlanabilir.
+
 ## Proje Yapısı
 
 ```
 sunucu/
 ├─ detector/        # Python tespit motoru (YOLO11 + SAHI, tracker, HTTP API)
 │  ├─ app/
-│  └─ models/       # Model ağırlıkları (best.pt)
+│  └─ models/       # Model ağırlıkları (best.pt, bestEski.pt, bestGüncel.pt, epoch70.pt — Git LFS)
 ├─ backend/         # Spring Boot API + PostgreSQL entegrasyonu
 ├─ frontend/        # React arayüzü (backend build'ine gömülür)
 ├─ config.yaml.example
 ├─ config.docker.yaml.example
 └─ cameras*.json
 docker-compose.yml
+docs/
+└─ screenshots/     # README'deki arayüz ekran görüntüleri
 ```
