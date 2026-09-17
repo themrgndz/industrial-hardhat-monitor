@@ -13,8 +13,12 @@
 }
 
 /* Varsayılan: her parça net/okunabilir (blur yok). Fare şu üzerine
-   (.giris__shell) geldiğinde, hover/focus edilmeyen parçalar bulanıklaşır;
-   aktif parça daima net kalır. */
+   (.giris__shell) geldiğinde, hover/focus edilmeyen parçalar hem kendi
+   rengi/yazısı (filter: blur+dim) hem de üstlerinden geçen particle efekti
+   (aşağıdaki .giris__bg opaklık kuralı) bulanıklaşır/soluklaşır; aktif
+   (hover edilen) parça HİÇBİR özel işlem görmez — varsayılan durumdaki gibi
+   particles'ın ALTINDA kalır, üstünden tam parlaklıkla geçtiği için "canlı"
+   görünür. */
 .giris__panel {
   position: absolute;
   inset: 0;
@@ -24,20 +28,15 @@
 }
 .giris__shell:hover .giris__panel:not(:hover):not(:focus-within) {
   filter: blur(4px) brightness(0.85) saturate(1);
-}
-.giris__panel:hover,
-.giris__panel:focus-visible {
   z-index: 20;
 }
 
-/* Aktif (hover/focus) parçada arkaplan rengi kısmen saydamlaşır — panel
-   z-index'i particles katmanının (z-index 10) üzerine çıktığı için (aşağıda),
-   bu saydamlıktan uçuşan nokta efekti GERÇEKTEN sızar (basit alfa
-   karışımı, backdrop-filter hilesi değil); .giris__label panelin en üstünde
-   opak çizildiği için hiçbir zaman bulanıklaşmaz/bloklanmaz. Diğer (hover
-   edilmeyen) parçalarda panel particles'ın ALTINDA kaldığından efekt tam
-   parlaklıkla üstlerinden geçer — aktif parçada bu yüzden kıyasla "daha az
-   görünür" olur. */
+/* Hover edilmeyen parçalar particles katmanının (z-index 10) ÜZERİNE
+   çıkarılır (yukarıdaki kural) ve kendi arkaplanları kısmen saydamlaştırılır
+   — böylece üstlerinden geçen particle efekti sönükleşir (basit alfa
+   karışımı). Aktif parça particles'ın ALTINDA kaldığından etkilenmez,
+   .giris__label panelin en üstünde opak çizildiği için hiçbir zaman
+   bulanıklaşmaz/bloklanmaz. */
 .giris__bg {
   position: absolute;
   inset: -6%;
@@ -50,6 +49,8 @@
 .giris__panel:hover .giris__bg,
 .giris__panel:focus-visible .giris__bg {
   transform: scale(1.18);
+}
+.giris__shell:hover .giris__panel:not(:hover):not(:focus-within) .giris__bg {
   opacity: 0.85;
 }
 
