@@ -68,13 +68,10 @@ class CameraStore:
             try:
                 os.replace(tmp_name, self._path)
             except OSError:
-                # Docker Desktop (Windows/macOS) tek dosya bind-mount'unda atomik
-                # rename bazen "Device or resource busy" ile reddediliyor
-                # (VirtioFS/gRPC-FUSE sınırlaması; ölçüldü: 12. kamera eklenirken
-                # kamera canlıda çalışıyor ama dosyaya hiç yazılmıyordu — restart'ta
-                # kayboluyordu). Atomiklik feda edilir, hedefe doğrudan yazılır —
-                # düşük riskli bir konfig dosyası, kısa süreli kısmi yazım ihtimali
-                # burada kabul edilebilir (2026-09-02).
+                # Atomik rename bazı dosya sistemlerinde reddedilebilir —
+                # atomiklik feda edilir, hedefe doğrudan yazılır; düşük
+                # riskli bir konfig dosyası, kısa süreli kısmi yazım
+                # ihtimali burada kabul edilebilir.
                 with open(self._path, "w", encoding="utf-8") as direct:
                     direct.write(data)
                 Path(tmp_name).unlink(missing_ok=True)

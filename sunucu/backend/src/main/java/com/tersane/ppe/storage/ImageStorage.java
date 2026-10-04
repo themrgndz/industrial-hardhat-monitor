@@ -67,4 +67,35 @@ public class ImageStorage {
             // diskte kalması veri kaybı değil, en fazla yer israfı — DB satırı yine de silinsin
         }
     }
+
+    /** `storage-root` altındaki tüm dosyaların toplam boyutu (bayt) — temizlik eşiği için. */
+    public long usedBytes() {
+        try (var stream = Files.walk(storageRoot)) {
+            return stream.filter(Files::isRegularFile)
+                    .mapToLong(this::sizeQuiet)
+                    .sum();
+        } catch (IOException e) {
+            return 0L;
+        }
+    }
+
+    /** Göreli yolun bayt boyutu; dosya yoksa/okunamazsa 0. */
+    public long sizeOf(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return 0L;
+        }
+        Path target = storageRoot.resolve(relativePath).normalize();
+        if (!target.startsWith(storageRoot)) {
+            return 0L;
+        }
+        return sizeQuiet(target);
+    }
+
+    private long sizeQuiet(Path p) {
+        try {
+            return Files.size(p);
+        } catch (IOException e) {
+            return 0L;
+        }
+    }
 }

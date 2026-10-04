@@ -26,3 +26,7 @@ spring:
 app:
   api-key: ${BACKEND_API_KEY}
   storage-root: ${STORAGE_ROOT:storage}
+  violation-retention-hours: 6
+  violation-storage-max-bytes: 4294967296   # 4 GiB — aşılınca en eski kayıtlardan silinmeye başlanır
+  violation-storage-free-bytes: 1073741824  # sınır aşılınca en az bu kadar (1 GiB) yer açılır
+  violation-cleanup-interval-ms: 900000     # 15 dk — yaş + boyut temizliği aynı taramada

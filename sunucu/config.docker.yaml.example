@@ -1,13 +1,17 @@
-# Docker/GPU-sunucu için config.yaml varyantı — bu, gerçek config.docker.yaml'ın
-# örnek/şablon halidir (gerçek dosya gitignore'da, api_key gerçek bir sırdır).
-# Kurulumda bu dosyayı `config.docker.yaml` olarak kopyalayıp api_key'i
-# .env'deki BACKEND_API_KEY ile AYNI, kendi ürettiğiniz bir değerle değiştirin.
+# Docker/compose için config.yaml varyantı — bu dosya örnek/şablon'dur.
+# Kurulumda `sunucu/docker-data/config/config.yaml` olarak kopyalayıp
+# backend.api_key'i .env'deki BACKEND_API_KEY ile AYNI, kendi ürettiğiniz
+# bir değerle değiştirin. Bu dosya ve yanındaki cameras.json imaja GÖMÜLMEZ —
+# detector container'ına docker-compose.yml üzerinden dizin olarak
+# bind-mount edilir (bkz. docker-compose.yml, PPE_CONFIG).
 #
-# Fark sadece iki satır:
-#   - server.host: 0.0.0.0   (127.0.0.1 konteyner dışından erişilemez)
-#   - backend.url: http://backend:8080   (compose service adı, 127.0.0.1 değil)
-# Geri kalanı sunucu/config.yaml ile birebir aynı tutulmalı.
-cameras_file: "camera-state/cameras.docker.json"       # host.docker.internal ile, cameras.json (native, 127.0.0.1) farklı
+# Yerel (GPU'suz) test makinesi ile GPU sunucu arasındaki TEK fark:
+#   model.device: "cpu"    (test makinesi, GPU yok)
+#   model.device: "cuda:0" (GPU sunucu, docker-compose.gpu.yml ile)
+# İmaj ikisinde de AYNI — cuda hiç çağrılmazsa NVIDIA driver gerekmez.
+#
+# cameras.json bu dosyayla AYNI dizinde olmalı (docker-data/config/cameras.json).
+cameras_file: "cameras.json"
 
 stream:
   read_fail_threshold: 30
@@ -18,13 +22,13 @@ stream:
 capture:
   fps: 1.0
   continuous: true
-  batch_size: 3
+  batch_size: 1                          # test makinesinde CPU ile düşük tutun; GPU sunucuda artırılabilir
 
 monitoring:
   mode: "all"
 
 server:
-  host: "0.0.0.0"
+  host: "0.0.0.0"                        # container dışına (docker-compose "ports:") açmak için ZORUNLU
   port: 8090
   preview_width: 480
   preview_jpeg_quality: 70
@@ -33,8 +37,8 @@ server:
   live_fps: 10.0
 
 model:
-  path: "detector/models/best.pt"
-  device: "cuda:0"
+  path: "../detector/models/best.pt"     # config.yaml'a göre GÖRELİ; imajda WORKDIR /app/sunucu
+  device: "cpu"                          # GPU sunucuda "cuda:0" yapın (docker-compose.gpu.yml ile)
   violation_class: "No-Helmet Head"
   thresholds:
     "No-Helmet Head": 0.35
@@ -46,7 +50,7 @@ sahi:
   overlap_ratio: 0.2
   postprocess_match_threshold: 0.5
   upscale_factor: 1.0
-  enabled: false
+  enabled: true
   full_frame_pass: true
 
 tracking:
@@ -54,18 +58,18 @@ tracking:
   max_age_seconds: 10.0
   confirm_frames: 1
   cooldown_seconds: 60
-  match_distance_ratio: 1.5              # bkz. sunucu/config.yaml.example — IoU tutmazsa hareketli
-                                          # nesneyi (yavaş capture.fps'de) merkez mesafesiyle eşleştirir
+  match_distance_ratio: 1.5
 
 logging:
-  dir: "logs/ihlal"
+  dir: "logs/ihlal"                      # imajda WORKDIR /app/sunucu'ya göreli; container'da
+                                          # /app/sunucu/logs/ihlal'e karşılık gelir (bkz. docker-compose.yml)
   jsonl_name: "violations.jsonl"
   crop_padding_ratio: 0.4
   jpeg_quality: 90
 
 backend:
   enabled: true
-  url: "http://backend:8080"
-  api_key: "change-me-generate-32-hex"
+  url: "http://backend:8080"             # docker-compose servis adı (127.0.0.1 DEĞİL)
+  api_key: "change-me-generate-32-hex"   # .env'deki BACKEND_API_KEY ile AYNI olmalı
   timeout_seconds: 5.0
   retry_interval_seconds: 30.0

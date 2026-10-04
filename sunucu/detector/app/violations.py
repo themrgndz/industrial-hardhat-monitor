@@ -64,15 +64,6 @@ class ViolationLogger:
             crop_bytes = self._encode(frame[y1:y2, x1:x2], cfg.jpeg_quality)
             crop_rel_final = crop_rel
 
-        try:
-            cam_dir = cfg.dir / day / self._camera_id
-            cam_dir.mkdir(parents=True, exist_ok=True)
-            (cfg.dir / image_rel).write_bytes(image_bytes)
-            if crop_bytes is not None:
-                (cfg.dir / crop_rel).write_bytes(crop_bytes)
-        except OSError:
-            logger.exception("kanıt dosyası yazılamadı: track_id=%s", track.track_id)
-
         v = ViolationRecord(
             id=uuid.uuid4().hex,
             camera_id=self._camera_id,
@@ -84,11 +75,29 @@ class ViolationLogger:
             crop_path=crop_rel_final,
         )
 
+        # Yerel diske yazım artık KALICI değil, GEÇİCİ: backend tek kaynak
+        # (single source of truth). Backend'e POST başarılıysa görsel zaten
+        # orada duruyor — burada ikinci bir kalıcı kopya tutmuyoruz. Yalnız
+        # backend kapalıysa (tek depo burası) ya da POST başarısız olduysa
+        # (retry kuyruğu `img_file.read_bytes()` ile bu dosyaları okuyacak,
+        # bkz. backend_client.RetryWorker) diske yazılır.
         backend_id: str | None = None
+        posted = False
         if self._backend is not None:
             backend_id = self._backend.post_violation(v, image_bytes, crop_bytes)
             v = dataclasses.replace(v, backend_id=backend_id or "")
-        posted = backend_id is not None
+            posted = backend_id is not None
+
+        if self._backend is None or not posted:
+            try:
+                cam_dir = cfg.dir / day / self._camera_id
+                cam_dir.mkdir(parents=True, exist_ok=True)
+                (cfg.dir / image_rel).write_bytes(image_bytes)
+                if crop_bytes is not None:
+                    (cfg.dir / crop_rel).write_bytes(crop_bytes)
+            except OSError:
+                logger.exception("kanıt dosyası yazılamadı: track_id=%s", track.track_id)
+
         self._append_jsonl(v, posted)
         if self._backend is not None and not posted:
             self._append_retry_queue(v)

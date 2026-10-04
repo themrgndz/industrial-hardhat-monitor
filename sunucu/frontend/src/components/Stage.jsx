@@ -73,6 +73,7 @@ function tilePropsEqual(prev, next) {
   return (
     prev.analysis === next.analysis &&
     prev.minConfidence === next.minConfidence &&
+    prev.mode === next.mode &&
     prev.cam.id === next.cam.id &&
     prev.cam.name === next.cam.name &&
     prev.cam.connected === next.cam.connected &&
@@ -80,7 +81,7 @@ function tilePropsEqual(prev, next) {
   );
 }
 
-const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
+const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence, mode }) {
   const btnRef = useRef(null);
   const imgRef = useRef(null);
   const [tileSize, setTileSize] = useState({ w: 0, h: 0 });
@@ -164,7 +165,7 @@ const Tile = memo(function Tile({ cam, onSelect, analysis, minConfidence }) {
       )}
       <TileDots analysis={analysis} minConfidence={minConfidence} tileW={tileSize.w} tileH={tileSize.h} />
       <span className="tile-label">
-        <span className={`status-dot ${dotClass(cam)}`} />
+        <span className={`status-dot ${dotClass(cam, mode)}`} />
         <span>{cam.connected ? cam.name : `${cam.name} — bağlantı yok`}</span>
       </span>
     </button>
@@ -206,7 +207,7 @@ function defaultGridLayout(count) {
 }
 
 export default function Stage({
-  cameras, active, analysis, analysisByCamera, minConfidence, onSelect, onClose, onFullscreen,
+  cameras, active, analysis, analysisByCamera, minConfidence, mode, onSelect, onClose, onFullscreen,
   metricsView, metrics, metricsOk, gpuHistory, onSetBatchSize, batchBusy, onChangeModel, modelBusy,
 }) {
   const liveRef = useRef(null);
@@ -286,7 +287,7 @@ export default function Stage({
         <div className="camera-grid" style={{ "--grid-cols": cols, "--grid-rows": rows }}>
           {visibleCameras.map((cam) => (
             <Tile
-              key={cam.id} cam={cam} onSelect={onSelect}
+              key={cam.id} cam={cam} onSelect={onSelect} mode={mode}
               analysis={analysisByCamera?.[cam.id]} minConfidence={minConfidence}
             />
           ))}

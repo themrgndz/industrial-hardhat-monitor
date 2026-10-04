@@ -14,6 +14,7 @@ from .config import CameraConfig, Config
 from .display_settings import DisplaySettingsStore
 from .events import EventBus
 from .inference import Detection
+from .scheduling_control import SchedulingControl
 from .stream import StreamReader
 from .tracker import IoUTracker, Track
 from .violations import ViolationLogger
@@ -51,11 +52,15 @@ class CameraHub:
     bağlantısı açılmaz.
     """
 
-    def __init__(self, cfg: Config, backend, event_bus: EventBus, store: CameraStore) -> None:
+    def __init__(
+        self, cfg: Config, backend, event_bus: EventBus, store: CameraStore,
+        scheduling_control: SchedulingControl,
+    ) -> None:
         self._cfg = cfg
         self._bus = event_bus
         self._store = store
         self._backend = backend
+        self._scheduling_control = scheduling_control
         self._lock = threading.RLock()
         self._active_id: str | None = None
         self._states: dict[str, CameraState] = {}
@@ -313,11 +318,16 @@ class CameraHub:
     # ---- API gövdeleri ---------------------------------------------------
 
     def cameras_body(self) -> dict:
-        """POST/DELETE/GET /api/cameras ve SSE `cameras` olayı için ortak gövde."""
+        """POST/DELETE/GET /api/cameras ve SSE `cameras` olayı için ortak gövde.
+
+        `mode`: config.yaml'daki (`monitoring.mode`) BAŞLANGIÇ değeri değil,
+        `POST /api/scheduling` ile çalışırken değiştirilen CANLI mod — arayüz
+        bunu "model şu an tüm bağlı kameralarda mı, yoksa yalnız seçilide mi
+        çalışıyor" ayrımı için kullanıyor (bkz. useCameraHub.js dotClass)."""
         with self._lock:
             return {
                 "activeCameraId": self._active_id,
-                "mode": self._cfg.monitoring.mode,
+                "mode": self._scheduling_control.mode,
                 "cameras": [self._state_dict_locked(st) for st in self._states.values()],
             }
 

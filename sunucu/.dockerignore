@@ -1,19 +1,22 @@
-# build context = ./sunucu (docker-compose.yml: backend & detector both build here)
+# build context = ./sunucu (backend & detector Dockerfiles both build here)
 .env
 config.yaml
+config.docker.yaml
 cameras.json
+cameras.docker.json
+docker-data/
+logs/
 pgdata/
 pgsql/
-logs/
-backend/target/
-backend/storage/
-backend/.mvn/
-detector/.venv/
-detector/models/*.onnx
-detector/__pycache__/
-detector/scripts/
+display_settings.json
+capture_settings.json
+model_settings.json
+scheduling_settings.json
 frontend/node_modules/
 frontend/dist/
+backend/target/
+backend/storage/
+detector/.venv/
+detector/__pycache__/
 **/__pycache__/
 **/*.pyc
-.git/

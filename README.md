@@ -13,7 +13,6 @@ YOLO11 tabanlı bir nesne tespit modeli, SAHI dilimli çıkarım ile küçük/uz
 - **Arayüzden canlı ayarlanabilir çıkarım parametreleri** — GPU'ya aynı anda kaç kameranın verileceği (`batch_size`) arayüzden onaylı şekilde değiştirilebilir, restart gerekmez.
 - **Kamera ızgarasında tespit noktaları** — hiçbir kamera seçili değilken bile, tüm kameraların küçük önizlemelerinde kişi bazlı yeşil/kırmızı nokta overlay'i ile anlık durum özeti.
 - **İhlal kanıt zinciri** — her ihlal için tam kare + kırpılmış kanıt görseli diske ve merkezi backend'e (Postgres) kaydedilir; web arayüzünden onay/red iş akışı ve PDF rapor üretimi.
-- **Docker Compose ile tek komutla dağıtım** — detector (Python/GPU), backend (Spring Boot), frontend (React, backend içine gömülü) ve Postgres tek `docker compose up` ile ayağa kalkar.
 
 ## Ekran Görüntüleri
 
@@ -62,13 +61,14 @@ flowchart LR
 | Tespit motoru (`sunucu/detector`) | Python, PyTorch 2.6, Ultralytics YOLO11, SAHI, OpenCV |
 | Backend (`sunucu/backend`) | Java 21, Spring Boot 4.1, PostgreSQL 16 |
 | Frontend (`sunucu/frontend`) | React 19, Vite |
-| Dağıtım | Docker Compose, NVIDIA CUDA 12.4 |
+| Dağıtım | Yerel süreçler (PowerShell betikleri), NVIDIA CUDA 12.4 |
+| Dağıtım (opsiyonel) | Docker Hub imajları (`themrgndzd/ppe-backend`, `themrgndzd/ppe-detector`) + Compose |
 
 ## Hızlı Başlangıç
 
-Ön koşullar: Docker + Docker Compose, NVIDIA GPU + `nvidia-container-toolkit` (detector için).
+Ön koşullar: Java 21 + Maven Wrapper, Node.js 20+, Python 3.11+, PostgreSQL 16, NVIDIA GPU + CUDA (detector için).
 
-```bash
+```powershell
 git clone <bu-repo>
 cd <bu-repo>
 
@@ -79,24 +79,68 @@ git lfs pull
 # Gizli/ortam değişkenlerini örnekten türet
 cp .env.example sunucu/.env
 cp sunucu/config.yaml.example sunucu/config.yaml
-cp sunucu/config.docker.yaml.example sunucu/config.docker.yaml
-# sunucu/.env ve config*.yaml içindeki api_key değerlerini kendi
+# sunucu/.env ve sunucu/config.yaml içindeki api_key değerlerini kendi
 # ürettiğiniz bir değerle değiştirin (ikisi AYNI olmalı).
 
-docker compose up -d --build
+powershell -ExecutionPolicy Bypass -File sunucu\tools\start.ps1
 ```
 
 Detector API: `http://localhost:8090` · Web arayüzü (backend içine gömülü): `http://localhost:8080`
 
-Sürücünüzün desteklediği CUDA sürümü 12.4'ten düşükse:
+Durdurmak için:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File sunucu\tools\stop.ps1
+```
+
+## Docker ile Çalıştırma (Docker Hub'dan pull)
+
+Karşı makine (GPU sunucu veya GPU'suz test makinesi) **hiçbir şey build etmez** —
+hazır imajlar Docker Hub'dan (`themrgndzd/ppe-backend`, `themrgndzd/ppe-detector`,
+public) çekilir. Aynı imaj iki ortamda da çalışır; tek fark `config.yaml`
+içindeki `model.device` ("cpu" / "cuda:0") ve `docker-compose.gpu.yml`'in
+uygulanıp uygulanmamasıdır.
+
+**Geliştirme makinesinde (imaj build + push, bir kere / her güncellemede):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File sunucu\tools\docker-build-push.ps1
+```
+
+**Karşı makinede (test PC veya GPU sunucu, Docker + Docker Compose kurulu olmalı):**
 
 ```bash
-TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime docker compose up -d --build
+git clone <bu-repo>
+cd <bu-repo>
+
+cp .env.example .env
+# PG_*/BACKEND_API_KEY değerlerini kendi ürettiğiniz değerlerle doldurun.
+
+mkdir -p sunucu/docker-data/config sunucu/docker-data/logs
+cp sunucu/config.docker.yaml.example sunucu/docker-data/config/config.yaml
+# api_key'i .env'deki BACKEND_API_KEY ile AYNI yapın.
+# GPU yoksa model.device: "cpu" bırakın; GPU sunucuda "cuda:0" yapın.
+echo "[]" > sunucu/docker-data/config/cameras.json
+
+# GPU'suz test makinesi:
+docker compose pull
+docker compose up -d
+
+# GPU sunucu (host'ta NVIDIA driver + nvidia-container-toolkit kurulu olmalı):
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml pull
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 ```
+
+Web arayüzü: `http://localhost:8080` · Detector API: `http://localhost:8090`.
+Durdurmak için `docker compose down` (veriler `pgdata`/`backend_storage`
+named volume'larında ve `sunucu/docker-data/` dizininde kalıcı kalır).
+
+`sunucu/docker-data/` (config.yaml + cameras.json + logs) sır içerdiği için
+repoya girmez (`.gitignore`); her makinede elle bir kez hazırlanır.
 
 ## Yapılandırma
 
-Tüm çalışma zamanı ayarları `sunucu/config.yaml` (yerel) / `sunucu/config.docker.yaml` (Docker) dosyalarında toplanır — kamera akış zamanlaması, model eşikleri, SAHI dilimleme, kimlik takibi (tracker) ve ihlal loglama davranışı buradan kontrol edilir. Kamera listesi ayrı bir JSON dosyasında (`sunucu/cameras.json` / `sunucu/cameras.docker.json`) tutulur ve çalışma anında API üzerinden de yönetilebilir.
+Tüm çalışma zamanı ayarları `sunucu/config.yaml` dosyasında toplanır — kamera akış zamanlaması, model eşikleri, SAHI dilimleme, kimlik takibi (tracker) ve ihlal loglama davranışı buradan kontrol edilir. Kamera listesi ayrı bir JSON dosyasında (`sunucu/cameras.json`) tutulur ve çalışma anında API üzerinden de yönetilebilir.
 
 `sunucu/detector/models/` altında birden fazla eğitim çıktısı (`best.pt`, `bestEski.pt`, `bestGüncel.pt`, `epoch70.pt`) Git LFS ile depoda tutulur; aktif model, web arayüzündeki **Model Ayarları** sekmesinden (yukarıdaki ekran görüntüsü) yeniden başlatma gerekmeden değiştirilip zamanlanabilir.
 
@@ -104,15 +148,18 @@ Tüm çalışma zamanı ayarları `sunucu/config.yaml` (yerel) / `sunucu/config.
 
 ```
 sunucu/
-├─ detector/        # Python tespit motoru (YOLO11 + SAHI, tracker, HTTP API)
+├─ detector/        # Python tespit motoru (YOLO11 + SAHI, tracker, HTTP API); Dockerfile burada
 │  ├─ app/
 │  └─ models/       # Model ağırlıkları (best.pt, bestEski.pt, bestGüncel.pt, epoch70.pt — Git LFS)
-├─ backend/         # Spring Boot API + PostgreSQL entegrasyonu
+├─ backend/         # Spring Boot API + PostgreSQL entegrasyonu; Dockerfile burada
 ├─ frontend/        # React arayüzü (backend build'ine gömülür)
+├─ tools/           # start.ps1 / stop.ps1 / pg-start.ps1 / pg-stop.ps1 / docker-build-push.ps1
+├─ docker-data/     # (gitignore'da) config.yaml + cameras.json + logs — docker-compose bind-mount
 ├─ config.yaml.example
 ├─ config.docker.yaml.example
-└─ cameras*.json
+└─ cameras.json
 docker-compose.yml
+docker-compose.gpu.yml
 docs/
 └─ screenshots/     # README'deki arayüz ekran görüntüleri
 ```

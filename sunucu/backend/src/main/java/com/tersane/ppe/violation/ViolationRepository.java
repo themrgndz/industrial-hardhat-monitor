@@ -1,5 +1,7 @@
 package com.tersane.ppe.violation;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -15,4 +17,7 @@ public interface ViolationRepository
             String cameraId, String trackId, Instant detectedAt);
 
     List<Violation> findByDetectedAtBefore(Instant cutoff);
+
+    /** En eski ihlalden başlayarak sayfalı — boyut-tabanlı temizlikte kullanılır. */
+    Page<Violation> findAllByOrderByDetectedAtAsc(Pageable pageable);
 }

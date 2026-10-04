@@ -11,7 +11,7 @@ const EMPTY_FORM = { id: "", name: "", uri: "", previewUri: "" };
    sıkı boşluklar: sekme içeriği kayan panelin (.ayarlar__content) yüksekliğini
    aşmasın, kaydırma çubuğu çıkmasın diye. */
 export default function KameraAyarlariTab({ hub, metrics }) {
-  const { cameras, applyCameras } = hub;
+  const { cameras, mode, applyCameras } = hub;
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null); // null = ekleme modu, aksi hâlde düzenlenen kameranın mevcut id'si
   const [feedback, setFeedback] = useState({ msg: "", error: false });
@@ -119,7 +119,7 @@ export default function KameraAyarlariTab({ hub, metrics }) {
                   const h = healthById[cam.id];
                   return (
                     <tr key={cam.id} className={editingId === cam.id ? "table-active" : ""}>
-                      <td><span className={`status-dot ${dotClass(cam)}`} title={cam.connected ? (cam.active ? "aktif + bağlı" : "bağlı, model çalışmıyor") : "bağlantı yok"} /></td>
+                      <td><span className={`status-dot ${dotClass(cam, mode)}`} title={cam.connected ? (mode === "all" || cam.active ? "model çalışıyor" : "bağlı, model çalışmıyor") : "bağlantı yok"} /></td>
                       <td>
                         <div>{cam.name}</div>
                         <div className="cam-uri text-secondary small">{cam.uri || "—"}</div>

@@ -28,3 +28,30 @@
   color: #fff;
   opacity: 1;
 }
+
+.brand-navbar__nav {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: 28px;
+}
+.brand-navbar__link {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+.brand-navbar__link:hover,
+.brand-navbar__link:focus-visible {
+  color: #fff;
+  opacity: 0.9;
+}
+.brand-navbar__link.is-active {
+  opacity: 1;
+  border-bottom: 2px solid #fff;
+  padding-bottom: 2px;
+}

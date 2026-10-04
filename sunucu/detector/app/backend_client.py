@@ -114,11 +114,10 @@ class RetryWorker:
                 continue
 
             crop_path = record.get("crop_path") or ""
+            crop_file = self._log_cfg.dir / crop_path if crop_path else None
             crop_bytes: bytes | None = None
-            if crop_path:
-                crop_file = self._log_cfg.dir / crop_path
-                if crop_file.exists():
-                    crop_bytes = crop_file.read_bytes()
+            if crop_file is not None and crop_file.exists():
+                crop_bytes = crop_file.read_bytes()
 
             bbox_xyxy = record["bbox"]
             x1, y1, x2, y2 = bbox_xyxy
@@ -130,7 +129,12 @@ class RetryWorker:
                 crop_path=crop_path,
             )
             ok = self._backend.post_violation(v, img_file.read_bytes(), crop_bytes) is not None
-            if not ok:
+            if ok:
+                # geçici retry-kopyası artık gereksiz: backend tek kaynak oldu.
+                img_file.unlink(missing_ok=True)
+                if crop_file is not None:
+                    crop_file.unlink(missing_ok=True)
+            else:
                 remaining.append(line)
 
         if remaining:

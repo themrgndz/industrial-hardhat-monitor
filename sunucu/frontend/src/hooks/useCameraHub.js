@@ -6,12 +6,15 @@ import {
 
 const CAMERAS_POLL_MS = 5000;
 
-// yeşil: model bu kamerada çalışıyor (aktif + bağlı) · sarı: yayın var, model çalışmıyor
-// (bağlı ama aktif değil) · kırmızı (varsayılan): hiç yayın/bağlantı yok.
-export function dotClass(cam) {
-  if (cam.active && cam.connected) return "on";
-  if (cam.connected) return "warn";
-  return "";
+// yeşil: model bu kamerada çalışıyor — çoklu kamera modunda (mode === "all")
+// round-robin TÜM bağlı kameraları tarar, bu yüzden bağlı olan hepsi yeşildir;
+// tekli modda (mode === "selected") yalnız seçili/aktif kamera yeşildir.
+// sarı: yayın var ama model bu kamerada çalışmıyor (tekli modda, seçili
+// olmayan bağlı kameralar). kırmızı (varsayılan): hiç yayın/bağlantı yok.
+export function dotClass(cam, mode) {
+  if (!cam.connected) return "";
+  if (mode === "all" || cam.active) return "on";
+  return "warn";
 }
 
 // Ham tespit listesini (label, confidence) `minConfidence` eşiğine göre sayar —

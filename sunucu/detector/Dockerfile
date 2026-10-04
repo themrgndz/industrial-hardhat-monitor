@@ -2,14 +2,23 @@
 # (imported as `from . import config` inside detector/app, run as
 # `python -m detector.app.main` with cwd = sunucu/).
 #
-#   docker build -f detector/Dockerfile -t ppe-detector:latest sunucu/
+#   docker build -f detector/Dockerfile -t themrgndzd/ppe-detector:latest sunucu/
 #
-# GPU sunucunun NVIDIA driver'ı CUDA 12.4'ü desteklemiyorsa (driver < 550.x,
-# `nvidia-smi` çıktısındaki "CUDA Version" alanına bak), CUDA 11.8 varyantına düş:
-#   docker compose build --build-arg TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda11.8-cudnn9-runtime detector
-# (ikisi de torch==2.6.0'ı requirements.txt ile birebir eşleşecek şekilde hazır getirir.)
-ARG TORCH_BASE_IMAGE=pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
-FROM ${TORCH_BASE_IMAGE}
+# Tek image hem GPU sunucuda hem de GPU'suz test makinesinde çalışır: PyTorch
+# cuda runtime base image'ı, cuda hiç çağrılmazsa (model.device: "cpu") NVIDIA
+# driver/nvidia-container-toolkit GEREKTİRMEZ. GPU'da çalıştırmak için
+# `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d`
+# kullanılır (host'ta nvidia-container-toolkit kurulu + `model.device: "cuda:0"`).
+#
+# Secret-free image: config.yaml/cameras.json BAKED DEĞİL — bu dosyalar sır
+# (api_key, RTSP parolası) içerir ve public Docker Hub repo'suna gitmemeli.
+# Çalışma zamanında PPE_CONFIG env'i + bind-mount edilen bir dizin (tek dosya
+# DEĞİL — bazı Docker Desktop kurulumlarında single-file bind-mount bozuk
+# davranıyor) ile sağlanır; bkz. docker-compose.yml.
+#
+# Model ağırlıkları (detector/models/*.pt) sır değil — Git LFS asset'i olarak
+# imaja gömülür (`git lfs pull` sonrası build context'te hazır olmalı).
+FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
 
 # opencv needs libGL/glib at the OS level; ffmpeg backs OPENCV_FFMPEG_CAPTURE_OPTIONS (RTSP/TCP).
 # apt sources forced to https: some networks run a transparent http proxy that
@@ -25,18 +34,8 @@ RUN pip install --no-cache-dir -r detector/requirements.txt
 
 COPY detector/__init__.py detector/__init__.py
 COPY detector/app/ detector/app/
-
-# config.docker.yaml, cameras.docker.json ve detector/models/*.pt gitignore'da
-# (host/secret-specific) ama build context'e (sunucu/) mevcutlar; imaja
-# gömülüyor (Docker Desktop bu makinede host bind-mount'ları bozuk döndürüyor —
-# containerd snapshotter + Windows dosya paylaşımı; bkz. docker-compose.yml).
-# cameras.docker.json çalışma zamanında değişebildiği için camera-state/
-# named volume ile override edilir (volume boşsa Docker imajdaki içerikle
-# otomatik doldurur; directory-level mount — tek dosya mount'ları burada
-# yukarıdaki nedenle sorunlu).
-COPY config.docker.yaml config.docker.yaml
-COPY cameras.docker.json camera-state/cameras.docker.json
 COPY detector/models/ detector/models/
+
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8090
 ENTRYPOINT ["python", "-m", "detector.app.main"]

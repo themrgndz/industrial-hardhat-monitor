@@ -76,6 +76,7 @@ export default function CanliAkis() {
           analysis={hub.analysis}
           analysisByCamera={hub.analysisByCamera}
           minConfidence={hub.minConfidence}
+          mode={hub.mode}
           onSelect={handleSelect}
           onClose={handleClose}
           onFullscreen={() => setFocusMode((v) => !v)}

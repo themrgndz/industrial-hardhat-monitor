@@ -2,9 +2,11 @@
 # vite.config.js writes its build output straight into
 # backend/src/main/resources/static (outDir: ../backend/src/main/resources/static).
 #
-#   docker build -f backend/Dockerfile -t ppe-backend:latest sunucu/
+#   docker build -f backend/Dockerfile -t themrgndzd/ppe-backend:latest sunucu/
 #
-# (docker-compose.yml at the repo root already sets context: ./sunucu)
+# Secret-free image: no config/cameras/.env baked in — safe to push to a
+# PUBLIC Docker Hub repo. Runtime secrets (PG_*, BACKEND_API_KEY) come from
+# the server's .env via docker-compose env_file.
 
 # ---- 1) frontend build (vite -> backend/src/main/resources/static) --------
 FROM node:20-alpine AS frontend-build

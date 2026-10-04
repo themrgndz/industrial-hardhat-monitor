@@ -50,18 +50,18 @@ class Application:
             self._backend = BackendClient(cfg.backend)
             self._retry_worker = RetryWorker(cfg.logging, cfg.backend, self._backend)
         self._violation_worker = ViolationWorker(self._on_violation_recorded)
-        self._hub = CameraHub(cfg, self._backend, self._bus, CameraStore(cfg.cameras_file))
+        self._scheduling_control = SchedulingControl(
+            Path(cfg.cameras_file).resolve().parent / "scheduling_settings.json",
+            default_mode=cfg.monitoring.mode, default_continuous=cfg.capture.continuous,
+            default_fps=cfg.capture.fps,
+        )
+        self._hub = CameraHub(cfg, self._backend, self._bus, CameraStore(cfg.cameras_file), self._scheduling_control)
         self._gpu_monitor = GpuMonitor(cfg.model.device)
         self._scheduler_stats = SchedulerStats()
         self._engine_control = EngineControl()
         self._capture_control = CaptureControl(
             Path(cfg.cameras_file).resolve().parent / "capture_settings.json",
             default=cfg.capture.batch_size, max_value=16,
-        )
-        self._scheduling_control = SchedulingControl(
-            Path(cfg.cameras_file).resolve().parent / "scheduling_settings.json",
-            default_mode=cfg.monitoring.mode, default_continuous=cfg.capture.continuous,
-            default_fps=cfg.capture.fps,
         )
         self._server = DetectorServer(
             cfg, self._hub, self._bus, self._scheduler_stats, self._gpu_monitor,

@@ -24,10 +24,12 @@ Cam/frames_upload/
 !sunucu/detector/models/epoch70.pt
 DEPLOY-NOTU.md
 sunucu/config.yaml
-sunucu/config.docker.yaml
 __pycache__/
 OTURUM-NOTU*.txt
 sunucu/OTURUM-NOTU.md
 sunucu/frontend/README.md
 sunucu/cameras.json
-sunucu/cameras.docker.json
+sunucu/docker-data/
+deploy-data/
+deploy-data.zip
+deploy-data*.zip

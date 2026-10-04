@@ -86,7 +86,7 @@ class ModelControl:
             try:
                 os.replace(tmp_name, self._settings_path)
             except OSError:
-                # Docker Desktop bind-mount kısıtı (bkz. cameras_store.py:save) —
+                # Atomik rename bazı dosya sistemlerinde reddedilebilir —
                 # atomiklik feda edilir, hedefe doğrudan yazılır.
                 with open(self._settings_path, "w", encoding="utf-8") as direct:
                     direct.write(data)
