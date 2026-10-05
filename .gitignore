@@ -18,10 +18,10 @@ Cam/frames/
 Cam/frames_upload/
 *.mp4
 *.pt
-!sunucu/detector/models/best.pt
-!sunucu/detector/models/bestEski.pt
-!sunucu/detector/models/bestGüncel.pt
-!sunucu/detector/models/epoch70.pt
+!sunucu/detector/models/ModelV1.pt
+!sunucu/detector/models/ModelV2.pt
+!sunucu/detector/models/ModelV3.pt
+!sunucu/detector/models/ModelBest.pt
 DEPLOY-NOTU.md
 sunucu/config.yaml
 __pycache__/

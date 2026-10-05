@@ -37,7 +37,7 @@ server:
   live_fps: 10.0
 
 model:
-  path: "../detector/models/best.pt"     # config.yaml'a göre GÖRELİ; imajda WORKDIR /app/sunucu
+  path: "../detector/models/ModelBest.pt"     # config.yaml'a göre GÖRELİ; imajda WORKDIR /app/sunucu
   device: "cpu"                          # GPU sunucuda "cuda:0" yapın (docker-compose.gpu.yml ile)
   violation_class: "No-Helmet Head"
   thresholds:

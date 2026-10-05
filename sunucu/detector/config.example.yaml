@@ -41,9 +41,9 @@ server:
   live_fps: 10.0
 
 model:
-  path: "detector/models/best.pt"
+  path: "detector/models/ModelBest.pt"
   device: "cuda:0"
-  violation_class: "No-Helmet Head"      # modelin gerçek sınıf adı (best.pt: {0:'Helmet',1:'No-Helmet Head'})
+  violation_class: "No-Helmet Head"      # modelin gerçek sınıf adı (ModelBest.pt: {0:'Helmet',1:'No-Helmet Head'})
   thresholds:
     "No-Helmet Head": 0.35
     "Helmet": 0.30
