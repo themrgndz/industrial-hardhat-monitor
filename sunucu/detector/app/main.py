@@ -22,6 +22,7 @@ from .engine_control import EngineControl
 from .events import EventBus
 from .hub import CameraHub, CameraState
 from .inference import Detection
+from .local_retention import LocalRetentionWorker
 from .metrics import GpuMonitor, SchedulerStats
 from .model_control import ModelControl
 from .scheduling_control import SchedulingControl
@@ -49,6 +50,10 @@ class Application:
         if cfg.backend.enabled:
             self._backend = BackendClient(cfg.backend)
             self._retry_worker = RetryWorker(cfg.logging, cfg.backend, self._backend)
+        # Backend kapalıyken ya da POST başarısız olduğunda diske yazılan geçici
+        # kanıt görselleri için yaş + boyut tabanlı temizlik — backend durumundan
+        # bağımsız, her zaman çalışır (bkz. LocalRetentionWorker docstring'i).
+        self._local_retention = LocalRetentionWorker(cfg.logging)
         self._violation_worker = ViolationWorker(self._on_violation_recorded)
         self._scheduling_control = SchedulingControl(
             Path(cfg.cameras_file).resolve().parent / "scheduling_settings.json",
@@ -77,6 +82,7 @@ class Application:
     def run(self) -> None:
         if self._retry_worker is not None:
             self._retry_worker.start()
+        self._local_retention.start()
         self._violation_worker.start()
         self._server.start()
 
@@ -294,6 +300,7 @@ class Application:
         self._violation_worker.stop()
         if self._retry_worker is not None:
             self._retry_worker.stop()
+        self._local_retention.stop()
         self._hub.stop_all()
 
 

@@ -66,6 +66,12 @@ logging:
   jsonl_name: "violations.jsonl"
   crop_padding_ratio: 0.4
   jpeg_quality: 90
+  # backend kapalıyken/uzun süre erişilemezken biriken yerel görseller için
+  # güvenlik ağı — backend'deki retention ile AYNI politika (application.yml).
+  retention_hours: 6.0
+  max_bytes: 2147483648                  # 2 GiB
+  free_bytes: 536870912                  # 512 MiB
+  cleanup_interval_seconds: 900          # 15 dk
 
 backend:
   enabled: true

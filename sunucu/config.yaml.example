@@ -77,6 +77,15 @@ logging:
   jsonl_name: "violations.jsonl"
   crop_padding_ratio: 0.4                # bbox kenar uzunluğunun oranı kadar pay
   jpeg_quality: 90
+  # Bu dizine NORMALDE kalıcı dosya yazılmaz (backend tek kaynak); backend
+  # kapalıyken ya da POST uzun süre başarısız olduğunda (retry kuyruğu)
+  # biriken görseller için güvenlik ağı — backend'deki
+  # violation-retention-hours/-storage-max-bytes/-storage-free-bytes ile
+  # AYNI politika (bkz. application.yml, LocalRetentionWorker).
+  retention_hours: 6.0                   # bu süreden eski yerel görsel silinir
+  max_bytes: 2147483648                  # 2 GiB — aşılınca en eskiden silinmeye başlanır
+  free_bytes: 536870912                  # sınır aşılınca en az bu kadar (512 MiB) yer açılır
+  cleanup_interval_seconds: 900          # 15 dk — yaş + boyut temizliği aynı taramada
 
 backend:
   enabled: true                          # false ise yalnız yerel JSONL + görsel

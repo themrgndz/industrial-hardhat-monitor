@@ -19,7 +19,10 @@ _SECTION_KEYS: dict[str, set[str]] = {
         "upscale_factor", "enabled", "full_frame_pass",
     },
     "tracking": {"iou_threshold", "max_age_seconds", "confirm_frames", "cooldown_seconds", "match_distance_ratio"},
-    "logging": {"dir", "jsonl_name", "crop_padding_ratio", "jpeg_quality"},
+    "logging": {
+        "dir", "jsonl_name", "crop_padding_ratio", "jpeg_quality",
+        "retention_hours", "max_bytes", "free_bytes", "cleanup_interval_seconds",
+    },
     "backend": {"enabled", "url", "api_key", "timeout_seconds", "retry_interval_seconds"},
 }
 _MONITORING_MODES = {"selected", "all"}
@@ -122,6 +125,16 @@ class LoggingConfig:
     jsonl_name: str
     crop_padding_ratio: float
     jpeg_quality: int
+    # Backend tek kaynak (single source of truth); yerel diske yazım yalnız
+    # backend KAPALIYKEN ya da POST başarısız olduğunda (retry kuyruğu) geçici
+    # kanıt tutmak içindir (bkz. ViolationLogger.record). Backend uzun süre
+    # erişilemez olursa bu alan disk sınırsız dolmasın diye yaş + boyut
+    # tabanlı periyodik temizlik uygular — backend tarafındaki
+    # ViolationRetentionScheduler ile AYNI politika (bkz. LocalRetentionWorker).
+    retention_hours: float
+    max_bytes: int
+    free_bytes: int
+    cleanup_interval_seconds: float
 
     @property
     def jsonl_path(self) -> Path:
@@ -187,12 +200,16 @@ class Config:
             )
         sahi = SahiConfig(**raw["sahi"])
         tracking = TrackingConfig(**raw["tracking"])
-        logging_cfg = LoggingConfig(
-            dir=Path(raw["logging"]["dir"]),
-            jsonl_name=raw["logging"]["jsonl_name"],
-            crop_padding_ratio=raw["logging"]["crop_padding_ratio"],
-            jpeg_quality=raw["logging"]["jpeg_quality"],
-        )
+        logging_raw = dict(raw["logging"])
+        logging_cfg = LoggingConfig(dir=Path(logging_raw.pop("dir")), **logging_raw)
+        if logging_cfg.retention_hours <= 0:
+            raise RuntimeError("config.yaml: logging.retention_hours pozitif olmalı")
+        if logging_cfg.max_bytes <= 0 or logging_cfg.free_bytes <= 0:
+            raise RuntimeError("config.yaml: logging.max_bytes ve logging.free_bytes pozitif olmalı")
+        if logging_cfg.free_bytes > logging_cfg.max_bytes:
+            raise RuntimeError("config.yaml: logging.free_bytes, logging.max_bytes'ı aşamaz")
+        if logging_cfg.cleanup_interval_seconds <= 0:
+            raise RuntimeError("config.yaml: logging.cleanup_interval_seconds pozitif olmalı")
         backend = BackendConfig(**raw["backend"])
 
         return cls(
