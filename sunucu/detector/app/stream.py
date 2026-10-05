@@ -123,8 +123,23 @@ class StreamReader:
         self._frame_interval = 1.0 / fps if fps and fps > 0 else None
 
     def _run(self) -> None:
-        self._cap = self._open()
-        self._reset_playback_clock()
+        try:
+            self._cap = self._open()
+            self._reset_playback_clock()
+            self._read_loop()
+        finally:
+            # `_cap` SADECE bu thread tarafından açılır/okunur/serbest bırakılır.
+            # `stop()` çağıran thread'den (bkz. hub._stop_reader) senkron release
+            # YAPMAZ: cv2.VideoCapture thread-safe değildir, `read()` bu thread'de
+            # bloke olmuşken (RTSP donması, OpenCV'nin ~30s iç zaman aşımı) başka
+            # bir thread'den release() çağrısı native çökme/undefined behavior
+            # riski taşır. Döngü (`_read_loop`) `self._stop` görülünce burada
+            # normal şekilde döner, release tek sahibi bu thread'de kalır.
+            if self._cap is not None:
+                self._cap.release()
+                self._cap = None
+
+    def _read_loop(self) -> None:
         fail_streak = 0
         reconnect_attempts = 0
         while not self._stop.is_set():
@@ -197,8 +212,15 @@ class StreamReader:
         self._thread = None
         if thread is not None:
             thread.join(timeout=2)
-        if self._cap is not None:
-            self._cap.release()
-            self._cap = None
+            if thread.is_alive():
+                # `_run` muhtemelen `cv2.VideoCapture.read()` içinde bloke
+                # (RTSP donması, OpenCV'nin ~30s iç zaman aşımı). `_cap`'e BURADAN
+                # dokunmuyoruz — tek sahibi `_run`'ın kendi thread'i; o thread
+                # bloke çağrıdan dönünce `self._stop` görüp kendi `finally`
+                # bloğunda release edip sonlanacak (bkz. `_run`).
+                logger.warning(
+                    "stream(%s): okuyucu thread 2s içinde kapanmadı (muhtemelen "
+                    "okuma bloke), arka planda kendi kendine sonlanacak", self._uri,
+                )
         with self._lock:
             self._connected = False
