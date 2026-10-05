@@ -5,6 +5,11 @@ spring:
     url: jdbc:postgresql://127.0.0.1:5432/ppe
     username: ${PG_USER}
     password: ${PG_PASSWORD}
+    hikari:
+      maximum-pool-size: 15        # varsayılan 10 — tek ekran UI + ~10 kamera eşzamanlı
+                                    # ihlal POST'u + 15dk'lık retention taraması için tampon
+      leak-detection-threshold: 60000  # 60s'den uzun tutulan bağlantı loglanır — 3 günlük
+                                    # çalışmada olası bağlantı sızıntısını erken yakalamak için
   jpa:
     hibernate:
       ddl-auto: update

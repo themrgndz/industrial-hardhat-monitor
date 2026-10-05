@@ -33,4 +33,10 @@ FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 COPY --from=backend-build /src/backend/target/ppe-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# `-XX:MaxRAMPercentage=70.0`: JDK 10+ container ergonomisi varsayılan olarak
+# heap tavanını container bellek limitinin yalnız %25'i yapar — 2 GiB'lik bir
+# container limitinde (bkz. docker-compose.yml deploy.resources.limits.memory)
+# bu yalnız 512 MiB heap demektir; multipart görsel upload + Hibernate için
+# dar. %70'e çekilince ~1.4 GiB heap kalır, geri kalanı metaspace/thread
+# stack/native tamponlar için yeterli pay bırakır.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70.0", "-jar", "app.jar"]
