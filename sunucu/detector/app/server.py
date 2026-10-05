@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import queue
+import socket
 import sys
 import threading
 import time
@@ -56,17 +57,25 @@ class _Server(ThreadingHTTPServer):
         self.scheduling_control = scheduling_control
 
     def handle_error(self, request, client_address) -> None:
-        """MJPEG/SSE istemcisi sekmeyi kapattığında socketserver tam traceback
-        basıyor; bu normal akış, hata değil."""
+        """MJPEG/SSE istemcisi sekmeyi kapattığında ya da yavaş/donmuş bir
+        istemci yüzünden soket zaman aşımına uğradığında socketserver tam
+        traceback basıyor; bu normal akış, hata değil."""
         exc = sys.exc_info()[1]
-        if isinstance(exc, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
-            logger.debug("istemci bağlantıyı kapattı: %s", client_address)
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, socket.timeout)):
+            logger.debug("istemci bağlantıyı kapattı/zaman aşımı: %s", client_address)
             return
         logger.exception("http isteği başarısız: %s", client_address)
 
 
 class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+    # `StreamRequestHandler.setup()` bunu görünce `connection.settimeout(timeout)`
+    # çağırır — hem istek okuma hem de MJPEG/SSE döngülerindeki `wfile.write()`
+    # bu sokete uygulanır. Yavaş/donmuş istemci (TCP alım tamponu hiç
+    # boşalmıyor) bir `write()` çağrısını artık SONSUZA DEK değil, en fazla bu
+    # kadar bloke eder — sonrasında `socket.timeout` fırlatılır, bağlantı
+    # kapanır, thread+fd serbest kalır (bkz. _handle_live/_handle_events).
+    timeout = 30.0
     server_version = "ppe-detector"
 
     # ---- yardımcılar -----------------------------------------------------
@@ -494,7 +503,7 @@ class _Handler(BaseHTTPRequestHandler):
                 sleep = interval - (time.monotonic() - loop_start)
                 if sleep > 0:
                     time.sleep(sleep)
-        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, socket.timeout):
             return
 
     def _handle_camera_test(self, camera_id: str) -> None:
@@ -533,7 +542,7 @@ class _Handler(BaseHTTPRequestHandler):
                     self.wfile.flush()
                     continue
                 self._write_event(event_type, payload)
-        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, socket.timeout):
             return
         finally:
             self._bus.unsubscribe(q)
