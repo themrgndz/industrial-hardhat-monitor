@@ -31,6 +31,11 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
       interval: 5s
@@ -50,6 +55,11 @@ services:
       - "8080:8080"
     volumes:
       - backend_storage:/app/storage
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   detector:
     image: themrgndzd/ppe-detector:latest
@@ -63,6 +73,11 @@ services:
     volumes:
       - ./sunucu/docker-data/config:/app/sunucu/config-data
       - ./sunucu/docker-data/logs:/app/sunucu/logs/ihlal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   pgdata:
