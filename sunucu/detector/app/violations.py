@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import threading
 import uuid
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -159,13 +160,25 @@ class ViolationWorker:
     %546'ya çıktı). İhlal hızı (~0.5/sn) tek thread'in rahatça yetişeceği
     kadar düşük; tek worker GIL çekişmesini minimuma indirir, network I/O
     yine de GIL'i bırakır — art arda gelen ihlaller kuyrukta bekler ama ana
-    döngüyü bloklamaz (bu zaten asıl hedefti)."""
+    döngüyü bloklamaz (bu zaten asıl hedefti).
+
+    SINIR: `ThreadPoolExecutor`'ın kendi iş kuyruğu varsayılan olarak SINIRSIZDIR.
+    Backend uzun süre yanıt vermezse (her POST ~5s zaman aşımına kadar bloke
+    olabilir) kuyruk, gelen ihlal hızından daha yavaş boşalır ve HER bekleyen
+    görevde tam bir kamera karesi (1080p BGR ~6 MB) referansı birikir — 3 gün
+    süren bir kesinti senaryosunda bu sınırsız RAM büyümesi (OOM) demektir.
+    `_inflight` semaforu eşzamanlı bekleyen+işlenen görev sayısını
+    `_MAX_QUEUED` ile sınırlar; dolu olduğunda `submit()` YİNE bloklanmaz
+    (ana döngü kuralı korunur) — görev sessizce düşürülür, uyarı loglanır."""
 
     _WORKERS = 1
+    _MAX_QUEUED = 64  # ~64 * 6 MB ~= 384 MB üst sınır (1080p kare varsayımıyla)
 
     def __init__(self, on_recorded: Callable[[str, str, ViolationRecord], None]) -> None:
         self._on_recorded = on_recorded
         self._executor: ThreadPoolExecutor | None = None
+        self._inflight = threading.Semaphore(self._MAX_QUEUED)
+        self._dropped_total = 0
 
     def start(self) -> None:
         self._executor = ThreadPoolExecutor(max_workers=self._WORKERS, thread_name_prefix="violation")
@@ -175,6 +188,14 @@ class ViolationWorker:
         when: datetime, camera_id: str, camera_name: str,
     ) -> None:
         if self._executor is None:
+            return
+        if not self._inflight.acquire(blocking=False):
+            self._dropped_total += 1
+            logger.warning(
+                "ihlal kaydı düşürüldü (kuyruk dolu, kapasite=%d, toplam düşürülen=%d): "
+                "kamera=%s track=%s — backend/disk yetişemiyor olabilir",
+                self._MAX_QUEUED, self._dropped_total, camera_id, track.track_id,
+            )
             return
         self._executor.submit(self._process, violation_logger, frame, track, when, camera_id, camera_name)
 
@@ -187,6 +208,8 @@ class ViolationWorker:
             self._on_recorded(camera_id, camera_name, record)
         except Exception:  # noqa: BLE001 — arka plan işi; ana döngüyü etkilememeli
             logger.exception("ihlal kaydı işlenemedi: kamera=%s track=%s", camera_id, track.track_id)
+        finally:
+            self._inflight.release()
 
     def stop(self) -> None:
         if self._executor is not None:
